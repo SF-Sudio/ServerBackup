@@ -42,7 +42,7 @@ public class SBCommand implements CommandExecutor {
 
 					for (int i = 0; i < backups.length && i < 10; i++) {
 						TextComponent msg = new TextComponent(
-								"[" + Integer.valueOf(i + 1) + "] " + backups[i].getName());
+								"§7[" + Integer.valueOf(i + 1) + "] §r" + backups[i].getName());
 						msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
 								new ComponentBuilder("Click to delete this backup").create()));
 						msg.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
@@ -146,7 +146,7 @@ public class SBCommand implements CommandExecutor {
 
 						for (int i = page * 10 - 10; i < backups.length && i < page * 10; i++) {
 							TextComponent msg = new TextComponent(
-									"[" + Integer.valueOf(i + 1) + "] " + backups[i].getName());
+									"§7[" + Integer.valueOf(i + 1) + "] §r" + backups[i].getName());
 							msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
 									new ComponentBuilder("Click to delete this backup").create()));
 							msg.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
@@ -170,37 +170,49 @@ public class SBCommand implements CommandExecutor {
 						sender.sendMessage("");
 						sender.sendMessage("-------- Page " + page + "/" + maxPages + " --------");
 					} catch (Exception e) {
-						boolean fileFound = false;
+						sender.sendMessage("'" + args[1] + "' is not a valid number.");
+					}
+				} else if (args[0].equalsIgnoreCase("search")) {
+					File[] backups = new File("Backups").listFiles(File::isDirectory);
 
-						for (int i = 0; i < backups.length && i < 10; i++) {
-							if (backups[i].getName().contains(args[1])) {
-								TextComponent msg = new TextComponent(backups[i].getName());
-								msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-										new ComponentBuilder("Click to delete this backup").create()));
-								msg.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
-										"/backup remove " + backups[i].getName()));
+					if (backups.length == 0) {
+						sender.sendMessage("No backups found.");
 
-								if (sender instanceof Player) {
-									Player p = (Player) sender;
+						return false;
+					}
 
-									p.spigot().sendMessage(msg);
-								} else {
-									sender.sendMessage(backups[i].getName());
-								}
+					Arrays.sort(backups);
 
-								fileFound = true;
+					boolean fileFound = false;
+
+					for (int i = 0; i < backups.length && i < 10; i++) {
+						if (backups[i].getName().contains(args[1])) {
+							TextComponent msg = new TextComponent(backups[i].getName());
+							msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+									new ComponentBuilder("Click to delete this backup").create()));
+							msg.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+									"/backup remove " + backups[i].getName()));
+
+							if (sender instanceof Player) {
+								Player p = (Player) sender;
+
+								p.spigot().sendMessage(msg);
+							} else {
+								sender.sendMessage(backups[i].getName());
 							}
-						}
 
-						if (!fileFound) {
-							sender.sendMessage("No backups for search argument '" + args[1] + "' found.");
+							fileFound = true;
 						}
+					}
+
+					if (!fileFound) {
+						sender.sendMessage("No backups for search argument '" + args[1] + "' found.");
 					}
 				} else {
 					sendHelp(sender);
 				}
 			} else if (args.length == 3) {
-				if (args[0].equalsIgnoreCase("list")) {
+				if (args[0].equalsIgnoreCase("search")) {
 					File[] backups = new File("Backups").listFiles(File::isDirectory);
 
 					if (backups.length == 0) {
@@ -255,10 +267,10 @@ public class SBCommand implements CommandExecutor {
 	private void sendHelp(CommandSender sender) {
 		sender.sendMessage("/backup reload - reloads the config");
 		sender.sendMessage("");
-		sender.sendMessage("/backup list - shows a list of all backups");
+		sender.sendMessage("/backup list <page> - shows a list of 10 backups");
 		sender.sendMessage("");
 		sender.sendMessage(
-				"/backup list <search argument> - shows a list of all backups that contain the given search arguments");
+				"§m/backup search <search argument> <page> - shows a list of 10 backups that contain the given search argument§r [coming soon...]");
 		sender.sendMessage("");
 		sender.sendMessage("/backup create <world> - creates a new backup of a world");
 		sender.sendMessage("");
