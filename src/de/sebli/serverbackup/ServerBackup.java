@@ -59,6 +59,10 @@ public class ServerBackup extends JavaPlugin {
 
 		getConfig().addDefault("DeleteOldBackups", 7);
 
+		getConfig().addDefault("ZipCompression", true);
+
+		getConfig().addDefault("SendLogMessages", false);
+
 		saveConfig();
 	}
 
