@@ -1,6 +1,6 @@
 name: ServerBackup
 author: Seblii
-version: 0.9.5-BETA
+version: 1.0.0
 
 main: de.sebli.serverbackup.ServerBackup
 

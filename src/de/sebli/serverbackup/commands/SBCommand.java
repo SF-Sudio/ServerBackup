@@ -8,8 +8,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.TimeZone;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -265,37 +268,63 @@ public class SBCommand implements CommandExecutor {
 						return false;
 					}
 
-					Arrays.sort(backups);
+					List<File> backupsMatch = new ArrayList<>();
 
-					boolean fileFound = false;
-
-					for (int i = 0; i < backups.length && i < 10; i++) {
+					for (int i = 0; i < backups.length; i++) {
 						if (backups[i].getName().contains(args[1])) {
-							double fileSize = (double) FileUtils.sizeOf(backups[i]) / 1000 / 1000;
-							fileSize = Math.round(fileSize * 100.0) / 100.0;
+							backupsMatch.add(backups[i]);
+						}
+					}
 
-							TextComponent msg = new TextComponent("§7[" + Integer.valueOf(i + 1) + "] §r"
-									+ backups[i].getName() + " §7[" + fileSize + "MB]");
-							msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-									new ComponentBuilder("Click to delete this backup").create()));
-							msg.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
-									"/backup remove " + backups[i].getName()));
+					if (backupsMatch.size() == 0) {
+						sender.sendMessage("No backups for search argument '" + args[1] + "' found.");
+
+						return false;
+					}
+
+					Collections.sort(backupsMatch);
+
+					int count = 1;
+
+					if (backupsMatch.size() < 10) {
+						sender.sendMessage(
+								"----- Backup 1-" + backupsMatch.size() + "/" + backupsMatch.size() + " -----");
+					} else {
+						sender.sendMessage("----- Backup 1-10/" + backupsMatch.size() + " -----");
+					}
+					sender.sendMessage("");
+
+					for (File file : backupsMatch) {
+						if (count <= 10 && count <= backupsMatch.size()) {
+							double fileSize = (double) FileUtils.sizeOf(file) / 1000 / 1000;
+							fileSize = Math.round(fileSize * 100.0) / 100.0;
 
 							if (sender instanceof Player) {
 								Player p = (Player) sender;
 
+								TextComponent msg = new TextComponent("§7[" + Integer.valueOf(count) + "] §r"
+										+ file.getName() + " §7[" + fileSize + "MB]");
+								msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+										new ComponentBuilder("Click to get Backup name").create()));
+								msg.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+										"/backup remove " + file.getName()));
+
 								p.spigot().sendMessage(msg);
 							} else {
-								sender.sendMessage(backups[i].getName());
+								sender.sendMessage(file.getName());
 							}
-
-							fileFound = true;
 						}
+						count++;
 					}
 
-					if (!fileFound) {
-						sender.sendMessage("No backups for search argument '" + args[1] + "' found.");
+					int maxPages = backupsMatch.size() / 10;
+
+					if (backupsMatch.size() % 10 != 0) {
+						maxPages++;
 					}
+
+					sender.sendMessage("");
+					sender.sendMessage("-------- Page 1/" + maxPages + " --------");
 				} else {
 					sendHelp(sender);
 				}
@@ -309,7 +338,21 @@ public class SBCommand implements CommandExecutor {
 						return false;
 					}
 
-					Arrays.sort(backups);
+					List<File> backupsMatch = new ArrayList<>();
+
+					for (int i = 0; i < backups.length; i++) {
+						if (backups[i].getName().contains(args[1])) {
+							backupsMatch.add(backups[i]);
+						}
+					}
+
+					if (backupsMatch.size() == 0) {
+						sender.sendMessage("No backups for search argument '" + args[1] + "' found.");
+
+						return false;
+					}
+
+					Collections.sort(backupsMatch);
 
 					try {
 						int page = Integer.valueOf(args[2]);
@@ -320,28 +363,48 @@ public class SBCommand implements CommandExecutor {
 							return false;
 						}
 
-						for (int i = page * 10 - 10; i < backups.length && i < page * 10; i++) {
-							if (backups[i].getName().contains(args[1])) {
-								double fileSize = (double) FileUtils.sizeOf(backups[i]) / 1000 / 1000;
-								fileSize = Math.round(fileSize * 100.0) / 100.0;
+						int count = page * 10 - 9;
 
-								TextComponent msg = new TextComponent("§7[" + Integer.valueOf(i + 1) + "] §r"
-										+ backups[i].getName() + " §7[" + fileSize + "MB]");
-								msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-										new ComponentBuilder("Click to delete this backup").create()));
-								msg.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
-										"/backup remove " + backups[i].getName()));
+						if (backupsMatch.size() <= page * 10 && backupsMatch.size() >= page * 10 - 10) {
+							sender.sendMessage("----- Backup " + Integer.valueOf(page * 10 - 9) + "-"
+									+ backupsMatch.size() + "/" + backupsMatch.size() + " -----");
+						} else {
+							sender.sendMessage("----- Backup " + Integer.valueOf(page * 10 - 9) + "-"
+									+ Integer.valueOf(page * 10) + "/" + backupsMatch.size() + " -----");
+						}
+						sender.sendMessage("");
+
+						for (File file : backupsMatch) {
+							if (count <= page * 10 && count <= backupsMatch.size()) {
+								double fileSize = (double) FileUtils.sizeOf(file) / 1000 / 1000;
+								fileSize = Math.round(fileSize * 100.0) / 100.0;
 
 								if (sender instanceof Player) {
 									Player p = (Player) sender;
 
+									TextComponent msg = new TextComponent("§7[" + Integer.valueOf(count) + "] §r"
+											+ file.getName() + " §7[" + fileSize + "MB]");
+									msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+											new ComponentBuilder("Click to get Backup name").create()));
+									msg.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+											"/backup remove " + file.getName()));
+
 									p.spigot().sendMessage(msg);
 								} else {
-									sender.sendMessage(backups[i].getName());
+									sender.sendMessage(file.getName());
 								}
 							}
+							count++;
 						}
 
+						int maxPages = backupsMatch.size() / 10;
+
+						if (backupsMatch.size() % 10 != 0) {
+							maxPages++;
+						}
+
+						sender.sendMessage("");
+						sender.sendMessage("-------- Page " + page + "/" + maxPages + " --------");
 					} catch (Exception e) {
 						sender.sendMessage("'" + args[2] + "' is not a valid number.");
 					}
@@ -362,7 +425,7 @@ public class SBCommand implements CommandExecutor {
 		sender.sendMessage("/backup list <page> - shows a list of 10 backups");
 		sender.sendMessage("");
 		sender.sendMessage(
-				"§m/backup search <search argument> <page> - shows a list of 10 backups that contain the given search argument§r [coming soon...]");
+				"/backup search <search argument> <page> - shows a list of 10 backups that contain the given search argument");
 		sender.sendMessage("");
 		sender.sendMessage("/backup create <world> - creates a new backup of a world");
 		sender.sendMessage("");
