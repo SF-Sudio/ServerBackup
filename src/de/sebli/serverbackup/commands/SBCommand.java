@@ -20,10 +20,13 @@ import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.util.StringUtil;
 
 import de.sebli.serverbackup.ServerBackup;
 import net.md_5.bungee.api.chat.ClickEvent;
@@ -31,7 +34,7 @@ import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 
-public class SBCommand implements CommandExecutor {
+public class SBCommand implements CommandExecutor, TabCompleter {
 
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -559,6 +562,72 @@ public class SBCommand implements CommandExecutor {
 			sender.sendMessage("");
 			sender.sendMessage("Backup [" + zipFile + "] unzipped.");
 		});
+	}
+
+	@Override
+	public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
+		List<String> completions = new ArrayList<>();
+		List<String> commands = new ArrayList<>();
+
+		if (sender.hasPermission("backup.admin")) {
+			if (args.length == 1) {
+				commands.add("reload");
+				commands.add("list");
+				commands.add("search");
+				commands.add("create");
+				commands.add("remove");
+				commands.add("zip");
+				commands.add("unzip");
+
+				StringUtil.copyPartialMatches(args[0], commands, completions);
+			} else if (args.length == 2) {
+				if (args[0].equalsIgnoreCase("list")) {
+					File[] backups = new File("Backups").listFiles();
+
+					int maxPages = backups.length / 10;
+
+					if (backups.length % 10 != 0) {
+						maxPages++;
+					}
+
+					for (int i = 1; i < maxPages + 1; i++) {
+						commands.add(String.valueOf(i));
+					}
+				} else if (args[0].equalsIgnoreCase("remove")) {
+					File[] backups = new File("Backups").listFiles();
+
+					for (int i = 0; i < backups.length; i++) {
+						commands.add(backups[i].getName());
+					}
+				} else if (args[0].equalsIgnoreCase("create")) {
+					for (World world : Bukkit.getWorlds()) {
+						commands.add(world.getName());
+					}
+				} else if (args[0].equalsIgnoreCase("zip")) {
+					File[] backups = new File("Backups").listFiles();
+
+					for (File backup : backups) {
+						if (!backup.getName().endsWith(".zip")) {
+							commands.add(backup.getName());
+						}
+					}
+				} else if (args[0].equalsIgnoreCase("unzip")) {
+					File[] backups = new File("Backups").listFiles();
+
+					for (File backup : backups) {
+						if (backup.getName().endsWith(".zip")) {
+							commands.add(backup.getName());
+						}
+					}
+				}
+
+				StringUtil.copyPartialMatches(args[1], commands, completions);
+			}
+		}
+
+		Collections.sort(completions);
+
+		return completions;
 	}
 
 }

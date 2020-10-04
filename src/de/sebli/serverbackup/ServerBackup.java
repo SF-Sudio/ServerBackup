@@ -49,44 +49,6 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		checkVersion();
 	}
 
-	@EventHandler
-	public void onJoin(PlayerJoinEvent e) {
-		Player p = e.getPlayer();
-
-		if (p.hasPermission("")) {
-			if (p.hasPermission("backup.admin")) {
-				Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-					int resourceID = 79320;
-					try (InputStream inputStream = (new URL(
-							"https://api.spigotmc.org/legacy/update.php?resource=" + resourceID)).openStream();
-							Scanner scanner = new Scanner(inputStream)) {
-						if (scanner.hasNext()) {
-							String latest = scanner.next();
-							String current = getDescription().getVersion();
-
-							int late = Integer.parseInt(latest.replaceAll("\\.", ""));
-							int curr = Integer.parseInt(current.replaceAll("\\.", ""));
-
-							if (curr >= late) {
-							} else {
-								p.sendMessage("§8=====§fServerBackup§8=====");
-								p.sendMessage("");
-								p.sendMessage("§7There is a newer version available - §a" + latest
-										+ "§7, you are on - §c" + current);
-								p.sendMessage(
-										"§7Please download the latest version - §4https://www.spigotmc.org/resources/"
-												+ resourceID);
-								p.sendMessage("");
-								p.sendMessage("§8=====§9Plugin by Seblii§8=====");
-							}
-						}
-					} catch (IOException exception) {
-					}
-				});
-			}
-		}
-	}
-
 	private void checkVersion() {
 		System.out.println("ServerBackup: Searching for updates...");
 
@@ -128,6 +90,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 		getConfig().options().header(
 				"BackupTimer = The time (in minutes) how often an automatic backup of the worlds (BackupWorlds) will be created."
+						+ "\nDeleteOldBackups = Deletes old backups automatically after a specific time (in days, standard = 7 days)"
 						+ "\nType '0' at DeleteOldBackups to disable the deletion of old backups.");
 		getConfig().options().copyDefaults(true);
 
@@ -156,8 +119,8 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 	public void startTimer() {
 		if (getConfig().getBoolean("AutomaticBackups")) {
-			Bukkit.getScheduler().runTaskTimerAsynchronously(this, new BackupTimer(),
-					20 * 60 * getConfig().getInt("BackupTimer"), 20 * 60 * getConfig().getInt("BackupTimer"));
+			Bukkit.getScheduler().runTaskTimer(this, new BackupTimer(), 20 * 60 * getConfig().getInt("BackupTimer"),
+					20 * 60 * getConfig().getInt("BackupTimer"));
 		}
 	}
 
@@ -165,4 +128,43 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		Bukkit.getScheduler().cancelTasks(this);
 	}
 
+	// Events
+	@EventHandler
+	public void onJoin(PlayerJoinEvent e) {
+		Player p = e.getPlayer();
+
+		if (p.hasPermission("")) {
+			if (p.hasPermission("backup.admin")) {
+				Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+					int resourceID = 79320;
+					try (InputStream inputStream = (new URL(
+							"https://api.spigotmc.org/legacy/update.php?resource=" + resourceID)).openStream();
+							Scanner scanner = new Scanner(inputStream)) {
+						if (scanner.hasNext()) {
+							String latest = scanner.next();
+							String current = getDescription().getVersion();
+
+							int late = Integer.parseInt(latest.replaceAll("\\.", ""));
+							int curr = Integer.parseInt(current.replaceAll("\\.", ""));
+
+							if (curr >= late) {
+							} else {
+								p.sendMessage("§8=====§fServerBackup§8=====");
+								p.sendMessage("");
+								p.sendMessage("§7There is a newer version available - §a" + latest
+										+ "§7, you are on - §c" + current);
+								p.sendMessage(
+										"§7Please download the latest version - §4https://www.spigotmc.org/resources/"
+												+ resourceID);
+								p.sendMessage("");
+								p.sendMessage("§8=====§9Plugin by Seblii§8=====");
+							}
+						}
+					} catch (IOException exception) {
+					}
+				});
+			}
+		}
+	}
+	
 }
