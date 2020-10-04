@@ -170,12 +170,7 @@ public class SBCommand implements CommandExecutor {
 
 						if (file.exists()) {
 							try {
-								zip(file.getPath(), newFile.getPath(), sender, true);
-
-								FileUtils.deleteDirectory(file);
-
-								sender.sendMessage("");
-								sender.sendMessage("Backup [" + args[1] + "] zipped.");
+								zip(file.getPath(), newFile.getPath(), sender, true, false);
 							} catch (IOException e) {
 								e.printStackTrace();
 							}
@@ -202,11 +197,6 @@ public class SBCommand implements CommandExecutor {
 
 						if (file.exists()) {
 							unzip(file.getPath(), "Backups//" + newFile.getName(), sender, true);
-
-							file.delete();
-
-							sender.sendMessage("");
-							sender.sendMessage("Backup [" + args[1] + "] unzipped.");
 						} else {
 							sender.sendMessage("No Backup named '" + args[1] + "' found.");
 						}
@@ -229,7 +219,7 @@ public class SBCommand implements CommandExecutor {
 					File worldFolder = new File(args[1]);
 
 					Date date = new Date();
-					SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'~'HH:mm:ss");
+					SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'~'HH-mm-ss");
 					df.setTimeZone(TimeZone.getDefault());
 
 					File backupFolder = new File("Backups//backup-" + df.format(date) + "-" + args[1] + "//" + args[1]);
@@ -239,15 +229,14 @@ public class SBCommand implements CommandExecutor {
 
 						try {
 							if (!backupFolder.exists()) {
-								if (ServerBackup.getInstance().getConfig().getBoolean("ZipCompression")) {
-									zip(worldFolder.getName(),
-											"Backups//backup-" + df.format(date) + "-" + args[1] + ".zip", sender,
-											false);
-								} else {
-									FileUtils.copyDirectory(worldFolder, backupFolder);
-								}
-
-								sender.sendMessage("Backup [" + args[1] + "] saved.");
+//								if (ServerBackup.getInstance().getConfig().getBoolean("ZipCompression")) {
+								zip(worldFolder.getName(),
+										"Backups//backup-" + df.format(date) + "-" + args[1] + ".zip", sender, false,
+										true);
+//								} else {
+//									FileUtils.copyDirectory(worldFolder, backupFolder);
+//									sender.sendMessage("Backup [" + args[1] + "] saved.");
+//								}
 							} else {
 								sender.sendMessage("Backup already exists.");
 							}
@@ -412,7 +401,9 @@ public class SBCommand implements CommandExecutor {
 			} else {
 				sendHelp(sender);
 			}
-		} else {
+		} else
+
+		{
 			sender.sendMessage("§cI'm sorry but you do not have permission to perform this command.");
 		}
 
@@ -436,99 +427,138 @@ public class SBCommand implements CommandExecutor {
 		sender.sendMessage("/backup unzip <file> - unzipping file");
 	}
 
-	public void zip(String sourceDirPath, String zipFilePath, CommandSender sender, boolean sendDebugMsg)
-			throws IOException {
-		long sTime = System.nanoTime();
+	public void zip(String sourceDirPath, String zipFilePath, CommandSender sender, boolean sendDebugMsg,
+			boolean isSaving) throws IOException {
+		Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
 
-		System.out.println(" ");
-		System.out.println("ServerBackup | Start zipping...");
-		System.out.println(" ");
+			long sTime = System.nanoTime();
 
-		Path p = Files.createFile(Paths.get(zipFilePath));
-		try (ZipOutputStream zs = new ZipOutputStream(Files.newOutputStream(p))) {
-			Path pp = Paths.get(sourceDirPath);
-			Files.walk(pp).filter(path -> !Files.isDirectory(path)).forEach(path -> {
-				ZipEntry zipEntry = new ZipEntry(pp.relativize(path).toString());
+			System.out.println(" ");
+			System.out.println("ServerBackup | Start zipping...");
+			System.out.println(" ");
+
+			Path p;
+			try {
+				p = Files.createFile(Paths.get(zipFilePath));
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.err.println("Error while zipping files.");
+				return;
+			}
+
+			try (ZipOutputStream zs = new ZipOutputStream(Files.newOutputStream(p))) {
+				Path pp = Paths.get(sourceDirPath);
+				Files.walk(pp).filter(path -> !Files.isDirectory(path)).forEach(path -> {
+					ZipEntry zipEntry = new ZipEntry(pp.relativize(path).toString());
+					try {
+						if (sendDebugMsg) {
+							System.out.println("Zipping '" + path.toString());
+
+							if (ServerBackup.getInstance().getConfig().getBoolean("SendLogMessages")) {
+								if (Bukkit.getConsoleSender() != sender) {
+									sender.sendMessage("Zipping '" + path.toString());
+								}
+							}
+						}
+
+						zs.putNextEntry(zipEntry);
+						Files.copy(path, zs);
+						zs.closeEntry();
+					} catch (IOException e) {
+						e.printStackTrace();
+						System.err.println("Error while zipping files.");
+						return;
+					}
+				});
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.err.println("Error while zipping files.");
+				return;
+			}
+
+			long time = (System.nanoTime() - sTime) / 1000000;
+
+			System.out.println(" ");
+			System.out.println("ServerBackup | Files zipped. [" + time + "ms]");
+			System.out.println(" ");
+
+			if (!isSaving) {
+				File file = new File(sourceDirPath);
+
 				try {
+					FileUtils.deleteDirectory(file);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+
+			sender.sendMessage("");
+			sender.sendMessage("Backup [" + sourceDirPath + "] zipped.");
+			sender.sendMessage("Backup [" + sourceDirPath + "] saved.");
+		});
+	}
+
+	public void unzip(String zipFile, String outputFolder, CommandSender sender, boolean sendDebugMsg) {
+		Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
+
+			long sTime = System.nanoTime();
+
+			System.out.println(" ");
+			System.out.println("ServerBackup | Start unzipping...");
+			System.out.println(" ");
+
+			byte[] buffer = new byte[1024];
+			try {
+				File folder = new File(outputFolder);
+				if (!folder.exists()) {
+					folder.mkdir();
+				}
+				ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile));
+				ZipEntry ze = zis.getNextEntry();
+				while (ze != null) {
+					String fileName = ze.getName();
+					File newFile = new File(outputFolder + File.separator + fileName);
+
 					if (sendDebugMsg) {
-						System.out.println("Zipping '" + path.toString());
+						System.out.println("Unzipping '" + newFile.getPath());
 
 						if (ServerBackup.getInstance().getConfig().getBoolean("SendLogMessages")) {
 							if (Bukkit.getConsoleSender() != sender) {
-								sender.sendMessage("Zipping '" + path.toString());
+								sender.sendMessage("Unzipping '" + newFile.getPath());
 							}
 						}
 					}
 
-					zs.putNextEntry(zipEntry);
-					Files.copy(path, zs);
-					zs.closeEntry();
-				} catch (IOException e) {
-					e.printStackTrace();
-					System.err.println("Error while zipping files.");
-					return;
-				}
-			});
-		}
-
-		long time = (System.nanoTime() - sTime) / 1000000;
-
-		System.out.println(" ");
-		System.out.println("ServerBackup | Files zipped. [" + time + "ms]");
-		System.out.println(" ");
-	}
-
-	public void unzip(String zipFile, String outputFolder, CommandSender sender, boolean sendDebugMsg) {
-		long sTime = System.nanoTime();
-
-		System.out.println(" ");
-		System.out.println("ServerBackup | Start unzipping...");
-		System.out.println(" ");
-
-		byte[] buffer = new byte[1024];
-		try {
-			File folder = new File(outputFolder);
-			if (!folder.exists()) {
-				folder.mkdir();
-			}
-			ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile));
-			ZipEntry ze = zis.getNextEntry();
-			while (ze != null) {
-				String fileName = ze.getName();
-				File newFile = new File(outputFolder + File.separator + fileName);
-
-				if (sendDebugMsg) {
-					System.out.println("Unzipping '" + newFile.getPath());
-
-					if (ServerBackup.getInstance().getConfig().getBoolean("SendLogMessages")) {
-						if (Bukkit.getConsoleSender() != sender) {
-							sender.sendMessage("Unzipping '" + newFile.getPath());
-						}
+					new File(newFile.getParent()).mkdirs();
+					FileOutputStream fos = new FileOutputStream(newFile);
+					int len;
+					while ((len = zis.read(buffer)) > 0) {
+						fos.write(buffer, 0, len);
 					}
+					fos.close();
+					ze = zis.getNextEntry();
 				}
-
-				new File(newFile.getParent()).mkdirs();
-				FileOutputStream fos = new FileOutputStream(newFile);
-				int len;
-				while ((len = zis.read(buffer)) > 0) {
-					fos.write(buffer, 0, len);
-				}
-				fos.close();
-				ze = zis.getNextEntry();
+				zis.closeEntry();
+				zis.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.err.println("Error while unzipping files.");
+				return;
 			}
-			zis.closeEntry();
-			zis.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.err.println("Error while unzipping files.");
-			return;
-		}
 
-		long time = (System.nanoTime() - sTime) / 1000000;
+			long time = (System.nanoTime() - sTime) / 1000000;
 
-		System.out.println(" ");
-		System.out.println("ServerBackup | Files unzipped. [" + time + "ms]");
-		System.out.println(" ");
+			System.out.println(" ");
+			System.out.println("ServerBackup | Files unzipped. [" + time + "ms]");
+			System.out.println(" ");
+
+			File file = new File(zipFile);
+
+			file.delete();
+
+			sender.sendMessage("");
+			sender.sendMessage("Backup [" + zipFile + "] unzipped.");
+		});
 	}
 
 }
