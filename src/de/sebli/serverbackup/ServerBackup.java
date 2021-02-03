@@ -53,7 +53,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		System.out.println("ServerBackup: Searching for updates...");
 
 		Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-			int resourceID = 79320;
+			int resourceID = 84504;
 			try (InputStream inputStream = (new URL(
 					"https://api.spigotmc.org/legacy/update.php?resource=" + resourceID)).openStream();
 					Scanner scanner = new Scanner(inputStream)) {
@@ -88,14 +88,28 @@ public class ServerBackup extends JavaPlugin implements Listener {
 			folder.mkdir();
 		}
 
-		getConfig().options().header(
-				"BackupTimer = The time (in minutes) how often an automatic backup of the worlds (BackupWorlds) will be created."
+		getConfig().options()
+				.header("BackupTimer = At what time should a Backup be created? The format is: 'hh-mm' e.g. '12-30'."
 						+ "\nDeleteOldBackups = Deletes old backups automatically after a specific time (in days, standard = 7 days)"
 						+ "\nType '0' at DeleteOldBackups to disable the deletion of old backups.");
 		getConfig().options().copyDefaults(true);
 
 		getConfig().addDefault("AutomaticBackups", true);
-		getConfig().addDefault("BackupTimer", 1440);
+
+		List<String> days = new ArrayList<>();
+		days.add("MONDAY");
+		days.add("TUESDAY");
+		days.add("WEDNESDAY");
+		days.add("THURSDAY");
+		days.add("FRIDAY");
+		days.add("SATURDAY");
+		days.add("SUNDAY");
+
+		List<String> times = new ArrayList<>();
+		times.add("00-00");
+
+		getConfig().addDefault("BackupTimer.Days", days);
+		getConfig().addDefault("BackupTimer.Times", times);
 
 		List<String> worlds = new ArrayList<>();
 		worlds.add("world");
@@ -119,8 +133,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 	public void startTimer() {
 		if (getConfig().getBoolean("AutomaticBackups")) {
-			Bukkit.getScheduler().runTaskTimer(this, new BackupTimer(), 20 * 60 * getConfig().getInt("BackupTimer"),
-					20 * 60 * getConfig().getInt("BackupTimer"));
+			Bukkit.getScheduler().runTaskTimerAsynchronously(this, new BackupTimer(), 20 * 60, 20 * 60);
 		}
 	}
 
@@ -136,7 +149,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		if (p.hasPermission("")) {
 			if (p.hasPermission("backup.admin")) {
 				Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-					int resourceID = 79320;
+					int resourceID = 84504;
 					try (InputStream inputStream = (new URL(
 							"https://api.spigotmc.org/legacy/update.php?resource=" + resourceID)).openStream();
 							Scanner scanner = new Scanner(inputStream)) {
@@ -166,5 +179,5 @@ public class ServerBackup extends JavaPlugin implements Listener {
 			}
 		}
 	}
-	
+
 }
