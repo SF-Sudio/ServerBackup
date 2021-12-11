@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.io.input.ClosedInputStream;
+import org.bukkit.craftbukkit.libs.org.apache.commons.io.input.ClosedInputStream;
 
 /**
  * This class implements an output stream in which the data is

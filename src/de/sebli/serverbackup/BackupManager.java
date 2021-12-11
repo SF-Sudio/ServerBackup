@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.logging.Level;
 
 import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
@@ -23,6 +24,11 @@ public class BackupManager {
 
 	public void createBackup() {
 		File worldFolder = new File(filePath);
+
+		if (filePath.equalsIgnoreCase("@server")) {
+			worldFolder = new File(Bukkit.getWorldContainer().getPath());
+			filePath = worldFolder.getPath();
+		}
 
 		Date date = new Date();
 		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'~'HH-mm-ss");
@@ -45,7 +51,7 @@ public class BackupManager {
 
 					zm.zip();
 				} else {
-					System.err.println("Backup already exists.");
+					ServerBackup.getInstance().getLogger().log(Level.WARNING, "Backup already exists.");
 				}
 			} catch (IOException e) {
 				e.printStackTrace();

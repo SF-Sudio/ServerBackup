@@ -27,6 +27,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 
 public class SBCommand implements CommandExecutor, TabCompleter {
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 

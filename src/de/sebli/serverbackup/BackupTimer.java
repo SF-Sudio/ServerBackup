@@ -2,8 +2,12 @@ package de.sebli.serverbackup;
 
 import java.io.File;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
 
@@ -45,44 +49,57 @@ public class BackupTimer implements Runnable {
 						}
 					}
 				} catch (Exception e) {
-					System.err.println(
+					ServerBackup.getInstance().getLogger().log(Level.WARNING,
 							"ServerBackup: Automatic Backup failed. Please check that you set the BackupTimer correctly.");
 				}
 			}
 		}
 
-		if (cal.get(Calendar.HOUR_OF_DAY) == 0 && cal.get(Calendar.MINUTE) == 0) {
-			if (ServerBackup.getInstance().getConfig().getInt("DeleteOldBackups") <= 0)
-				return;
+		if (ServerBackup.getInstance().getConfig().getInt("BackupLimiter") <= 0) {
+			if (cal.get(Calendar.HOUR_OF_DAY) == 0 && cal.get(Calendar.MINUTE) == 0) {
+				if (ServerBackup.getInstance().getConfig().getInt("DeleteOldBackups") <= 0)
+					return;
 
-			File[] backups = new File("Backups").listFiles();
+				File[] backups = new File("Backups").listFiles();
 
-			if (backups.length == 0)
-				return;
+				if (backups.length == 0)
+					return;
 
-			LocalDate date = LocalDate.now()
-					.minusDays(ServerBackup.getInstance().getConfig().getInt("DeleteOldBackups"));
+				Arrays.sort(backups, Collections.reverseOrder());
 
-			System.out.println("");
-			System.out.println("ServerBackup | Backup deletion started...");
-			System.out.println("");
+				LocalDate date = LocalDate.now()
+						.minusDays(ServerBackup.getInstance().getConfig().getInt("DeleteOldBackups"));
 
-			long time = System.currentTimeMillis();
+				System.out.println("");
+				System.out.println("ServerBackup | Backup deletion started...");
+				System.out.println("");
 
-			for (int i = 0; i < backups.length; i++) {
-				String[] backupDateStr = backups[i].getName().split("-");
-				LocalDate backupDate = LocalDate
-						.parse(backupDateStr[1] + "-" + backupDateStr[2] + "-" + backupDateStr[3].split("~")[0]);
+				long time = System.currentTimeMillis();
 
-				if (backupDate.isBefore(date.plusDays(1))) {
-					if (backups[i].exists()) {
-						backups[i].delete();
+				List<String> backupNames = new ArrayList<>();
 
-						System.out.println("Backup [" + backups[i].getName() + "] removed.");
-					} else {
-						System.out.println("No Backup named '" + backups[i].getName() + "' found.");
+				for (int i = 0; i < backups.length; i++) {
+					String[] backupDateStr = backups[i].getName().split("-");
+					LocalDate backupDate = LocalDate
+							.parse(backupDateStr[1] + "-" + backupDateStr[2] + "-" + backupDateStr[3].split("~")[0]);
+					String backupName = backupDateStr[6];
+
+					if (ServerBackup.getInstance().getConfig().getBoolean("KeepUniqueBackups")) {
+						if (!backupNames.contains(backupName)) {
+							backupNames.add(backupName);
+							continue;
+						}
 					}
-				}
+
+					if (backupDate.isBefore(date.plusDays(1))) {
+						if (backups[i].exists()) {
+							backups[i].delete();
+
+							System.out.println("Backup [" + backups[i].getName() + "] removed.");
+						} else {
+							System.out.println("No Backup named '" + backups[i].getName() + "' found.");
+						}
+					}
 //				if (backups[i].getName().contains(df.format(date))) {
 //					if (backups[i].exists()) {
 //						backups[i].delete();
@@ -92,12 +109,32 @@ public class BackupTimer implements Runnable {
 //						System.out.println("No Backup named '" + backups[i].getName() + "' found.");
 //					}
 //				}
-			}
+				}
 
-			System.out.println("");
-			System.out.println("ServerBackup | Backup deletion finished. ["
-					+ Long.valueOf(System.currentTimeMillis() - time) + "ms]");
-			System.out.println("");
+				System.out.println("");
+				System.out.println("ServerBackup | Backup deletion finished. ["
+						+ Long.valueOf(System.currentTimeMillis() - time) + "ms]");
+				System.out.println("");
+			}
+		} else {
+			File[] backups = new File("Backups").listFiles();
+			Arrays.sort(backups);
+
+			int dobc = ServerBackup.getInstance().getConfig().getInt("BackupLimiter");
+			int c = 0;
+
+			while (backups.length > dobc) {
+				if (backups[c].exists()) {
+					backups[c].delete();
+
+					System.out.println("Backup [" + backups[c].getName() + "] removed.");
+				} else {
+					System.out.println("No Backup named '" + backups[c].getName() + "' found.");
+				}
+
+				c++;
+				dobc++;
+			}
 		}
 	}
 
@@ -130,7 +167,7 @@ public class BackupTimer implements Runnable {
 			return "SATURDAY";
 		}
 
-		System.err.println("Error while converting number in day.");
+		ServerBackup.getInstance().getLogger().log(Level.WARNING, "Error while converting number in day.");
 
 		return null;
 	}
