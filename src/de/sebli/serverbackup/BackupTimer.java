@@ -70,9 +70,9 @@ public class BackupTimer implements Runnable {
 				LocalDate date = LocalDate.now()
 						.minusDays(ServerBackup.getInstance().getConfig().getInt("DeleteOldBackups"));
 
-				System.out.println("");
-				System.out.println("ServerBackup | Backup deletion started...");
-				System.out.println("");
+				ServerBackup.getInstance().getLogger().log(Level.INFO, "");
+				ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Backup deletion started...");
+				ServerBackup.getInstance().getLogger().log(Level.INFO, "");
 
 				long time = System.currentTimeMillis();
 
@@ -95,9 +95,9 @@ public class BackupTimer implements Runnable {
 						if (backups[i].exists()) {
 							backups[i].delete();
 
-							System.out.println("Backup [" + backups[i].getName() + "] removed.");
+							ServerBackup.getInstance().getLogger().log(Level.INFO, "Backup [" + backups[i].getName() + "] removed.");
 						} else {
-							System.out.println("No Backup named '" + backups[i].getName() + "' found.");
+							ServerBackup.getInstance().getLogger().log(Level.WARNING, "No Backup named '" + backups[i].getName() + "' found.");
 						}
 					}
 //				if (backups[i].getName().contains(df.format(date))) {
@@ -111,10 +111,10 @@ public class BackupTimer implements Runnable {
 //				}
 				}
 
-				System.out.println("");
-				System.out.println("ServerBackup | Backup deletion finished. ["
+				ServerBackup.getInstance().getLogger().log(Level.INFO, "");
+				ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Backup deletion finished. ["
 						+ Long.valueOf(System.currentTimeMillis() - time) + "ms]");
-				System.out.println("");
+				ServerBackup.getInstance().getLogger().log(Level.INFO, "");
 			}
 		} else {
 			File[] backups = new File("Backups").listFiles();
@@ -127,9 +127,9 @@ public class BackupTimer implements Runnable {
 				if (backups[c].exists()) {
 					backups[c].delete();
 
-					System.out.println("Backup [" + backups[c].getName() + "] removed.");
+					ServerBackup.getInstance().getLogger().log(Level.INFO, "Backup [" + backups[c].getName() + "] removed.");
 				} else {
-					System.out.println("No Backup named '" + backups[c].getName() + "' found.");
+					ServerBackup.getInstance().getLogger().log(Level.WARNING, "No Backup named '" + backups[c].getName() + "' found.");
 				}
 
 				c++;

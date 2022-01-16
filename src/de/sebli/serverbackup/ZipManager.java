@@ -39,9 +39,9 @@ public class ZipManager {
 
 			long sTime = System.nanoTime();
 
-			System.out.println(" ");
-			System.out.println("ServerBackup | Start zipping...");
-			System.out.println(" ");
+			ServerBackup.getInstance().getLogger().log(Level.INFO, "");
+			ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Start zipping...");
+			ServerBackup.getInstance().getLogger().log(Level.INFO, "");
 
 			Path p;
 			try {
@@ -58,9 +58,9 @@ public class ZipManager {
 					ZipEntry zipEntry = new ZipEntry(pp.relativize(path).toString());
 					try {
 						if (sendDebugMsg) {
-							System.out.println("Zipping '" + path.toString());
-
 							if (ServerBackup.getInstance().getConfig().getBoolean("SendLogMessages")) {
+								ServerBackup.getInstance().getLogger().log(Level.INFO, "Zipping '" + path.toString());
+
 								if (Bukkit.getConsoleSender() != sender) {
 									sender.sendMessage("Zipping '" + path.toString());
 								}
@@ -84,9 +84,9 @@ public class ZipManager {
 
 			long time = (System.nanoTime() - sTime) / 1000000;
 
-			System.out.println(" ");
-			System.out.println("ServerBackup | Files zipped. [" + time + "ms]");
-			System.out.println(" ");
+			ServerBackup.getInstance().getLogger().log(Level.INFO, "");
+			ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Files zipped. [" + time + "ms]");
+			ServerBackup.getInstance().getLogger().log(Level.INFO, "");
 
 			if (!isSaving) {
 				File file = new File(sourceFilePath);
@@ -115,9 +115,9 @@ public class ZipManager {
 
 			long sTime = System.nanoTime();
 
-			System.out.println(" ");
-			System.out.println("ServerBackup | Start unzipping...");
-			System.out.println(" ");
+			ServerBackup.getInstance().getLogger().log(Level.INFO, "");
+			ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Start unzipping...");
+			ServerBackup.getInstance().getLogger().log(Level.INFO, "");
 
 			byte[] buffer = new byte[1024];
 			try {
@@ -132,9 +132,9 @@ public class ZipManager {
 					File newFile = new File(targetFilePath + File.separator + fileName);
 
 					if (sendDebugMsg) {
-						System.out.println("Unzipping '" + newFile.getPath());
-
 						if (ServerBackup.getInstance().getConfig().getBoolean("SendLogMessages")) {
+							ServerBackup.getInstance().getLogger().log(Level.INFO, "Unzipping '" + newFile.getPath());
+
 							if (Bukkit.getConsoleSender() != sender) {
 								sender.sendMessage("Unzipping '" + newFile.getPath());
 							}
@@ -160,9 +160,9 @@ public class ZipManager {
 
 			long time = (System.nanoTime() - sTime) / 1000000;
 
-			System.out.println(" ");
-			System.out.println("ServerBackup | Files unzipped. [" + time + "ms]");
-			System.out.println(" ");
+			ServerBackup.getInstance().getLogger().log(Level.INFO, "");
+			ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Files unzipped. [" + time + "ms]");
+			ServerBackup.getInstance().getLogger().log(Level.INFO, "");
 
 			File file = new File(sourceFilePath);
 

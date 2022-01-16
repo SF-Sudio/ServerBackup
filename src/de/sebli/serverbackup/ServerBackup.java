@@ -36,11 +36,12 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		for (BukkitTask task : Bukkit.getScheduler().getPendingTasks()) {
 			task.cancel();
 
-			ServerBackup.getInstance().getLogger().log(Level.WARNING, "WARNING - ServerBackup: Task ["
-					+ task.getTaskId() + "] canceled due to server shutdown. There might be some unfinished Backups.");
+			this.getLogger().log(Level.WARNING, "WARNING - ServerBackup: Task [" + task.getTaskId()
+					+ "] cancelled due to server shutdown. There might be some unfinished Backups.");
 		}
 
-		System.out.println("ServerBackup: Plugin disabled.");
+		this.getLogger().log(Level.INFO, "ServerBackup: Plugin disabled.");
+//		System.out.println("ServerBackup: Plugin disabled.");
 	}
 
 	@Override
@@ -55,7 +56,8 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 		startTimer();
 
-		System.out.println("ServerBackup: Plugin enabled.");
+		this.getLogger().log(Level.INFO, "ServerBackup: Plugin enabled.");
+//		System.out.println("ServerBackup: Plugin enabled.");
 
 		checkVersion();
 	}
@@ -122,7 +124,8 @@ public class ServerBackup extends JavaPlugin implements Listener {
 						+ "\nDeleteOldBackups - Type '0' at DeleteOldBackups to disable the deletion of old backups."
 						+ "\nBackupLimiter = Deletes old backups automatically if number of total backups is greater than this number (e.g. if you enter '5' - the oldest backup will be deleted if there are more than 5 backups, so you will always keep the latest 5 backups)"
 						+ "\nBackupLimiter - Type '0' to disable this feature. If you don't type '0' the feature 'DeleteOldBackups' will be disabled and this feature ('BackupLimiter') will be enabled."
-						+ "\nKeepUniqueBackups - Type 'true' to disable the deletion of unique backups. The plugin will keep the newest backup of all backed up worlds or folders, no matter how old it is.");
+						+ "\nKeepUniqueBackups - Type 'true' to disable the deletion of unique backups. The plugin will keep the newest backup of all backed up worlds or folders, no matter how old it is."
+						+ "\nCollectiveZipFile - Type 'true' if you want to have all backed up worlds in just one zip file.");
 		getConfig().options().copyDefaults(true);
 
 		getConfig().addDefault("AutomaticBackups", true);
@@ -153,6 +156,8 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		getConfig().addDefault("BackupLimiter", 0);
 
 		getConfig().addDefault("KeepUniqueBackups", false);
+
+		getConfig().addDefault("CollectiveZipFile", false);
 
 //		getConfig().addDefault("ZipCompression", true);
 

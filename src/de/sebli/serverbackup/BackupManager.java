@@ -47,7 +47,7 @@ public class BackupManager {
 				if (!backupFolder.exists()) {
 					ZipManager zm = new ZipManager(worldFolder.getName(),
 							"Backups//backup-" + df.format(date) + "-" + filePath + ".zip", Bukkit.getConsoleSender(),
-							false, true);
+							true, true);
 
 					zm.zip();
 				} else {
@@ -56,10 +56,11 @@ public class BackupManager {
 			} catch (IOException e) {
 				e.printStackTrace();
 
-				System.out.println("Backup failed.");
+				ServerBackup.getInstance().getLogger().log(Level.WARNING, "Backup failed.");
+//				System.out.println("Backup failed.");
 			}
 		} else {
-			System.out.println("Couldn't find '" + filePath + "' folder.");
+			ServerBackup.getInstance().getLogger().log(Level.WARNING, "Couldn't find '" + filePath + "' folder.");
 		}
 	}
 
