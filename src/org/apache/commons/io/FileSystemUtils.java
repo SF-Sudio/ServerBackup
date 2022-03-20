@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -43,8 +44,8 @@ import java.util.StringTokenizer;
  * @since 1.1
  * @deprecated As of 2.6 deprecated without replacement. Use equivalent
  *  methods in {@link java.nio.file.FileStore} instead, e.g.
- *  <code>Files.getFileStore(Paths.get("/home")).getUsableSpace()</code>
- *  or iterate over <code>FileSystems.getDefault().getFileStores()</code>
+ *  {@code Files.getFileStore(Paths.get("/home")).getUsableSpace()}
+ *  or iterate over {@code FileSystems.getDefault().getFileStores()}
  */
 @Deprecated
 public class FileSystemUtils {
@@ -98,8 +99,6 @@ public class FileSystemUtils {
             } else if (osName.contains("hp-ux") ||
                     osName.contains("aix")) {
                 os = POSIX_UNIX;
-            } else {
-                os = OTHER;
             }
 
         } catch (final Exception ex) {
@@ -113,10 +112,8 @@ public class FileSystemUtils {
      * Instances should NOT be constructed in standard programming.
      */
     public FileSystemUtils() {
-        super();
     }
 
-    //-----------------------------------------------------------------------
     /**
      * Returns the free space on a drive or volume by invoking
      * the command line.
@@ -145,10 +142,9 @@ public class FileSystemUtils {
      */
     @Deprecated
     public static long freeSpace(final String path) throws IOException {
-        return INSTANCE.freeSpaceOS(path, OS, false, -1);
+        return INSTANCE.freeSpaceOS(path, OS, false, Duration.ofMillis(-1));
     }
 
-    //-----------------------------------------------------------------------
     /**
      * Returns the free space on a drive or volume in kibibytes (1024 bytes)
      * by invoking the command line.
@@ -207,7 +203,7 @@ public class FileSystemUtils {
      */
     @Deprecated
     public static long freeSpaceKb(final String path, final long timeout) throws IOException {
-        return INSTANCE.freeSpaceOS(path, OS, true, timeout);
+        return INSTANCE.freeSpaceOS(path, OS, true, Duration.ofMillis(timeout));
     }
 
     /**
@@ -250,7 +246,6 @@ public class FileSystemUtils {
         return freeSpaceKb(new File(".").getAbsolutePath(), timeout);
     }
 
-    //-----------------------------------------------------------------------
     /**
      * Returns the free space on a drive or volume in a cross-platform manner.
      * Note that some OS's are NOT currently supported, including OS/390.
@@ -271,7 +266,7 @@ public class FileSystemUtils {
      * @throws IllegalStateException if an error occurred in initialisation
      * @throws IOException if an error occurs when finding the free space
      */
-    long freeSpaceOS(final String path, final int os, final boolean kb, final long timeout) throws IOException {
+    long freeSpaceOS(final String path, final int os, final boolean kb, final Duration timeout) throws IOException {
         if (path == null) {
             throw new IllegalArgumentException("Path must not be null");
         }
@@ -290,7 +285,6 @@ public class FileSystemUtils {
         }
     }
 
-    //-----------------------------------------------------------------------
     /**
      * Find free space on the Windows platform using the 'dir' command.
      *
@@ -300,17 +294,17 @@ public class FileSystemUtils {
      * @return the amount of free drive space on the drive
      * @throws IOException if an error occurs
      */
-    long freeSpaceWindows(final String path, final long timeout) throws IOException {
+    long freeSpaceWindows(final String path, final Duration timeout) throws IOException {
         String normPath = FilenameUtils.normalize(path, false);
         if (normPath == null) {
             throw new IllegalArgumentException(path);
         }
-        if (normPath.length() > 0 && normPath.charAt(0) != '"') {
+        if (!normPath.isEmpty() && normPath.charAt(0) != '"') {
             normPath = "\"" + normPath + "\"";
         }
 
         // build and run the 'dir' command
-        final String[] cmdAttribs = new String[] {"cmd.exe", "/C", "dir /a /-c " + normPath};
+        final String[] cmdAttribs = {"cmd.exe", "/C", "dir /a /-c " + normPath};
 
         // read in the output of the command to an ArrayList
         final List<String> lines = performCommand(cmdAttribs, Integer.MAX_VALUE, timeout);
@@ -321,7 +315,7 @@ public class FileSystemUtils {
         // not, still assuming it is on the last non-blank line)
         for (int i = lines.size() - 1; i >= 0; i--) {
             final String line = lines.get(i);
-            if (line.length() > 0) {
+            if (!line.isEmpty()) {
                 return parseDir(line, normPath);
             }
         }
@@ -383,7 +377,6 @@ public class FileSystemUtils {
         return parseBytes(buf.toString(), path);
     }
 
-    //-----------------------------------------------------------------------
     /**
      * Find free space on the *nix platform using the 'df' command.
      *
@@ -395,7 +388,7 @@ public class FileSystemUtils {
      * @return the amount of free drive space on the volume
      * @throws IOException if an error occurs
      */
-    long freeSpaceUnix(final String path, final boolean kb, final boolean posix, final long timeout)
+    long freeSpaceUnix(final String path, final boolean kb, final boolean posix, final Duration timeout)
             throws IOException {
         if (path.isEmpty()) {
             throw new IllegalArgumentException("Path must not be empty");
@@ -426,14 +419,13 @@ public class FileSystemUtils {
         StringTokenizer tok = new StringTokenizer(line2, " ");
         if (tok.countTokens() < 4) {
             // could be long Filesystem, thus data on third line
-            if (tok.countTokens() == 1 && lines.size() >= 3) {
-                final String line3 = lines.get(2); // the line may be interested in
-                tok = new StringTokenizer(line3, " ");
-            } else {
+            if ((tok.countTokens() != 1) || (lines.size() < 3)) {
                 throw new IOException(
                         "Command line '" + DF + "' did not return data as expected " +
                         "for path '" + path + "'- check path is valid");
             }
+            final String line3 = lines.get(2); // the line may be interested in
+            tok = new StringTokenizer(line3, " ");
         } else {
             tok.nextToken(); // Ignore Filesystem
         }
@@ -443,7 +435,6 @@ public class FileSystemUtils {
         return parseBytes(freeSpace, path);
     }
 
-    //-----------------------------------------------------------------------
     /**
      * Parses the bytes from a string.
      *
@@ -469,9 +460,8 @@ public class FileSystemUtils {
         }
     }
 
-    //-----------------------------------------------------------------------
     /**
-     * Performs the os command.
+     * Performs an OS command.
      *
      * @param cmdAttribs  the command line parameters
      * @param max The maximum limit for the lines returned
@@ -480,7 +470,7 @@ public class FileSystemUtils {
      * @return the lines returned by the command, converted to lower-case
      * @throws IOException if an error occurs
      */
-    List<String> performCommand(final String[] cmdAttribs, final int max, final long timeout) throws IOException {
+    List<String> performCommand(final String[] cmdAttribs, final int max, final Duration timeout) throws IOException {
         // this method does what it can to avoid the 'Too many open files' error
         // based on trial and error and these links:
         // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4784692

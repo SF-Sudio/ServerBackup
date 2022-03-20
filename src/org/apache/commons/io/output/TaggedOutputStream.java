@@ -48,6 +48,7 @@ import org.apache.commons.io.TaggedIOException;
  * used to let higher levels of code handle the exception caused by this
  * stream while other processing errors are being taken care of at this
  * lower level.
+ * </p>
  * <pre>
  * TaggedOutputStream stream = new TaggedOutputStream(...);
  * try {
@@ -106,7 +107,7 @@ public class TaggedOutputStream extends ProxyOutputStream {
      * Tags any IOExceptions thrown, wrapping and re-throwing.
      *
      * @param e The IOException thrown
-     * @throws IOException if an I/O error occurs
+     * @throws IOException if an I/O error occurs.
      */
     @Override
     protected void handleIOException(final IOException e) throws IOException {

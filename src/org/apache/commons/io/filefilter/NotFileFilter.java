@@ -18,24 +18,27 @@ package org.apache.commons.io.filefilter;
 
 import java.io.File;
 import java.io.Serializable;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 
 /**
  * This filter produces a logical NOT of the filters specified.
  *
  * @since 1.0
- * @version $Id$
  * @see FileFilterUtils#notFileFilter(IOFileFilter)
  */
 public class NotFileFilter extends AbstractFileFilter implements Serializable {
 
     private static final long serialVersionUID = 6131563330944994230L;
+
     /** The filter */
     private final IOFileFilter filter;
 
     /**
      * Constructs a new file filter that NOTs the result of another filter.
      *
-     * @param filter  the filter, must not be null
+     * @param filter the filter, must not be null
      * @throws IllegalArgumentException if the filter is null
      */
     public NotFileFilter(final IOFileFilter filter) {
@@ -48,24 +51,41 @@ public class NotFileFilter extends AbstractFileFilter implements Serializable {
     /**
      * Returns the logical NOT of the underlying filter's return value for the same File.
      *
-     * @param file  the File to check
+     * @param file the File to check
      * @return true if the filter returns false
      */
     @Override
     public boolean accept(final File file) {
-        return ! filter.accept(file);
+        return !filter.accept(file);
     }
 
     /**
      * Returns the logical NOT of the underlying filter's return value for the same arguments.
      *
-     * @param file  the File directory
-     * @param name  the filename
+     * @param file the File directory
+     * @param name the file name
      * @return true if the filter returns false
      */
     @Override
     public boolean accept(final File file, final String name) {
-        return ! filter.accept(file, name);
+        return !filter.accept(file, name);
+    }
+
+    /**
+     * Returns the logical NOT of the underlying filter's return value for the same File.
+     * @param file the File to check
+     *
+     * @return true if the filter returns false
+     * @since 2.9.0
+     */
+    @Override
+    public FileVisitResult accept(final Path file, final BasicFileAttributes attributes) {
+        return not(filter.accept(file, attributes));
+    }
+
+    private FileVisitResult not(final FileVisitResult accept) {
+        return accept == FileVisitResult.CONTINUE ? FileVisitResult.TERMINATE
+            : FileVisitResult.CONTINUE;
     }
 
     /**
@@ -75,7 +95,7 @@ public class NotFileFilter extends AbstractFileFilter implements Serializable {
      */
     @Override
     public String toString() {
-        return super.toString() + "(" + filter.toString()  + ")";
+        return "NOT (" + filter.toString() + ")";
     }
 
 }

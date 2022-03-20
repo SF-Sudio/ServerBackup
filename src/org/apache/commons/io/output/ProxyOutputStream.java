@@ -20,6 +20,8 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.commons.io.IOUtils;
+
 /**
  * A Proxy stream which acts as expected, that is it passes the method
  * calls on to the proxied stream and doesn't change which methods are
@@ -28,6 +30,7 @@ import java.io.OutputStream;
  * <p>
  * See the protected methods for ways in which a subclass can easily decorate
  * a stream with custom pre-, post- or error processing functionality.
+ * </p>
  *
  */
 public class ProxyOutputStream extends FilterOutputStream {
@@ -43,9 +46,9 @@ public class ProxyOutputStream extends FilterOutputStream {
     }
 
     /**
-     * Invokes the delegate's <code>write(int)</code> method.
+     * Invokes the delegate's {@code write(int)} method.
      * @param idx the byte to write
-     * @throws IOException if an I/O error occurs
+     * @throws IOException if an I/O error occurs.
      */
     @Override
     public void write(final int idx) throws IOException {
@@ -59,14 +62,14 @@ public class ProxyOutputStream extends FilterOutputStream {
     }
 
     /**
-     * Invokes the delegate's <code>write(byte[])</code> method.
+     * Invokes the delegate's {@code write(byte[])} method.
      * @param bts the bytes to write
-     * @throws IOException if an I/O error occurs
+     * @throws IOException if an I/O error occurs.
      */
     @Override
     public void write(final byte[] bts) throws IOException {
         try {
-            final int len = bts != null ? bts.length : 0;
+            final int len = IOUtils.length(bts);
             beforeWrite(len);
             out.write(bts);
             afterWrite(len);
@@ -76,11 +79,11 @@ public class ProxyOutputStream extends FilterOutputStream {
     }
 
     /**
-     * Invokes the delegate's <code>write(byte[])</code> method.
+     * Invokes the delegate's {@code write(byte[])} method.
      * @param bts the bytes to write
      * @param st The start offset
      * @param end The number of bytes to write
-     * @throws IOException if an I/O error occurs
+     * @throws IOException if an I/O error occurs.
      */
     @Override
     public void write(final byte[] bts, final int st, final int end) throws IOException {
@@ -94,8 +97,8 @@ public class ProxyOutputStream extends FilterOutputStream {
     }
 
     /**
-     * Invokes the delegate's <code>flush()</code> method.
-     * @throws IOException if an I/O error occurs
+     * Invokes the delegate's {@code flush()} method.
+     * @throws IOException if an I/O error occurs.
      */
     @Override
     public void flush() throws IOException {
@@ -107,16 +110,12 @@ public class ProxyOutputStream extends FilterOutputStream {
     }
 
     /**
-     * Invokes the delegate's <code>close()</code> method.
-     * @throws IOException if an I/O error occurs
+     * Invokes the delegate's {@code close()} method.
+     * @throws IOException if an I/O error occurs.
      */
     @Override
     public void close() throws IOException {
-        try {
-            out.close();
-        } catch (final IOException e) {
-            handleIOException(e);
-        }
+        IOUtils.close(out, this::handleIOException);
     }
 
     /**
@@ -132,7 +131,9 @@ public class ProxyOutputStream extends FilterOutputStream {
      * @param n number of bytes to be written
      * @throws IOException if the pre-processing fails
      */
+    @SuppressWarnings("unused") // Possibly thrown from subclasses.
     protected void beforeWrite(final int n) throws IOException {
+        // noop
     }
 
     /**
@@ -149,16 +150,18 @@ public class ProxyOutputStream extends FilterOutputStream {
      * @param n number of bytes written
      * @throws IOException if the post-processing fails
      */
+    @SuppressWarnings("unused") // Possibly thrown from subclasses.
     protected void afterWrite(final int n) throws IOException {
+        // noop
     }
 
     /**
      * Handle any IOExceptions thrown.
      * <p>
      * This method provides a point to implement custom exception
-     * handling. The default behaviour is to re-throw the exception.
+     * handling. The default behavior is to re-throw the exception.
      * @param e The IOException thrown
-     * @throws IOException if an I/O error occurs
+     * @throws IOException if an I/O error occurs.
      * @since 2.0
      */
     protected void handleIOException(final IOException e) throws IOException {

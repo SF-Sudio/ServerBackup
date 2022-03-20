@@ -18,6 +18,7 @@ package org.apache.commons.io;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.Collections;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -34,30 +35,43 @@ import java.util.TreeMap;
  * </p>
  *
  * <ul>
- * <li><code>US-ASCII</code><br>
+ * <li>{@code US-ASCII}<br>
  * Seven-bit ASCII, a.k.a. ISO646-US, a.k.a. the Basic Latin block of the Unicode character set.</li>
- * <li><code>ISO-8859-1</code><br>
+ * <li>{@code ISO-8859-1}<br>
  * ISO Latin Alphabet No. 1, a.k.a. ISO-LATIN-1.</li>
- * <li><code>UTF-8</code><br>
+ * <li>{@code UTF-8}<br>
  * Eight-bit Unicode Transformation Format.</li>
- * <li><code>UTF-16BE</code><br>
+ * <li>{@code UTF-16BE}<br>
  * Sixteen-bit Unicode Transformation Format, big-endian byte order.</li>
- * <li><code>UTF-16LE</code><br>
+ * <li>{@code UTF-16LE}<br>
  * Sixteen-bit Unicode Transformation Format, little-endian byte order.</li>
- * <li><code>UTF-16</code><br>
+ * <li>{@code UTF-16}<br>
  * Sixteen-bit Unicode Transformation Format, byte order specified by a mandatory initial byte-order mark (either order
  * accepted on input, big-endian used on output.)</li>
  * </ul>
  *
  * @see <a href="https://docs.oracle.com/javase/7/docs/api/java/nio/charset/Charset.html">Standard charsets</a>
  * @since 2.3
- * @version $Id$
  */
 public class Charsets {
+
     //
     // This class should only contain Charset instances for required encodings. This guarantees that it will load
     // correctly and without delay on all Java platforms.
     //
+
+    private static final SortedMap<String, Charset> STANDARD_CHARSET_MAP;
+
+    static {
+        final SortedMap<String, Charset> standardCharsetMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        standardCharsetMap.put(StandardCharsets.ISO_8859_1.name(), StandardCharsets.ISO_8859_1);
+        standardCharsetMap.put(StandardCharsets.US_ASCII.name(), StandardCharsets.US_ASCII);
+        standardCharsetMap.put(StandardCharsets.UTF_16.name(), StandardCharsets.UTF_16);
+        standardCharsetMap.put(StandardCharsets.UTF_16BE.name(), StandardCharsets.UTF_16BE);
+        standardCharsetMap.put(StandardCharsets.UTF_16LE.name(), StandardCharsets.UTF_16LE);
+        standardCharsetMap.put(StandardCharsets.UTF_8.name(), StandardCharsets.UTF_8);
+        STANDARD_CHARSET_MAP = Collections.unmodifiableSortedMap(standardCharsetMap);
+    }
 
     /**
      * Constructs a sorted map from canonical charset names to charset objects required of every implementation of the
@@ -72,15 +86,7 @@ public class Charsets {
      * @since 2.5
      */
     public static SortedMap<String, Charset> requiredCharsets() {
-        // maybe cache?
-        final TreeMap<String, Charset> m = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        m.put(StandardCharsets.ISO_8859_1.name(), StandardCharsets.ISO_8859_1);
-        m.put(StandardCharsets.US_ASCII.name(), StandardCharsets.US_ASCII);
-        m.put(StandardCharsets.UTF_16.name(), StandardCharsets.UTF_16);
-        m.put(StandardCharsets.UTF_16BE.name(), StandardCharsets.UTF_16BE);
-        m.put(StandardCharsets.UTF_16LE.name(), StandardCharsets.UTF_16LE);
-        m.put(StandardCharsets.UTF_8.name(), StandardCharsets.UTF_8);
-        return Collections.unmodifiableSortedMap(m);
+        return STANDARD_CHARSET_MAP;
     }
 
     /**
@@ -97,14 +103,12 @@ public class Charsets {
     /**
      * Returns a Charset for the named charset. If the name is null, return the default Charset.
      *
-     * @param charset
-     *            The name of the requested charset, may be null.
-     * @return a Charset for the named charset
-     * @throws java.nio.charset.UnsupportedCharsetException
-     *             If the named charset is unavailable
+     * @param charsetName The name of the requested charset, may be null.
+     * @return a Charset for the named charset.
+     * @throws UnsupportedCharsetException If the named charset is unavailable (unchecked exception).
      */
-    public static Charset toCharset(final String charset) {
-        return charset == null ? Charset.defaultCharset() : Charset.forName(charset);
+    public static Charset toCharset(final String charsetName) throws UnsupportedCharsetException {
+        return charsetName == null ? Charset.defaultCharset() : Charset.forName(charsetName);
     }
 
     /**
