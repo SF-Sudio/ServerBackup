@@ -4,11 +4,15 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Level;
+import java.util.concurrent.Callable;
 
+import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -18,6 +22,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
 import de.sebli.serverbackup.commands.SBCommand;
+import de.sebli.serverbackup.utils.Metrics;
 
 public class ServerBackup extends JavaPlugin implements Listener {
 
@@ -27,7 +32,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		return sb;
 	}
 
-	public static File folder = new File("Backups");
+	public String backupDestination = "Backups//";
 
 	@Override
 	public void onDisable() {
@@ -59,7 +64,43 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		this.getLogger().log(Level.INFO, "ServerBackup: Plugin enabled.");
 //		System.out.println("ServerBackup: Plugin enabled.");
 
-		checkVersion();
+		if (getConfig().getBoolean("UpdateAvailabeMessage")) {
+			checkVersion();
+		}
+
+		if (getConfig().getBoolean("FirstStart")) {
+			if (System.getProperty("os.name").startsWith("Windows")) {
+				Bukkit.getScheduler().runTaskLater(this, new Runnable() {
+					@Override
+					public void run() {
+						ServerBackup.getInstance().getLogger().log(Level.WARNING,
+								"ServerBackup: Seems like you running this plugin on Windows. Please keep in mind, that this plugin does not support Windows officially. It may work fine, but some features might not work properly.");
+						getConfig().set("FirstStart", false);
+					}
+				}, 30);
+			} else {
+				getConfig().set("FirstStart", false);
+			}
+			saveConfig();
+		}
+
+		int mpid = 14673;
+
+		Metrics metrics = new Metrics(this, mpid);
+
+		metrics.addCustomChart(new Metrics.SingleLineChart("total_backup_space", new Callable<Integer>() {
+
+			@Override
+			public Integer call() throws Exception {
+				File file = new File(backupDestination);
+
+				double fileSize = (double) FileUtils.sizeOf(file) / 1000 / 1000;
+				fileSize = Math.round(fileSize * 100.0) / 100.0;
+
+				return (int) fileSize;
+			}
+
+		}));
 	}
 
 	private void checkVersion() {
@@ -89,12 +130,6 @@ public class ServerBackup extends JavaPlugin implements Listener {
 								"ServerBackup: Please download the latest version - https://www.spigotmc.org/resources/"
 										+ resourceID + "\n");
 
-						this.getLogger().log(Level.INFO, "\nServerBackup: There is a newer version available - "
-								+ latest + ", you are on - " + current);
-						this.getLogger().log(Level.INFO,
-								"ServerBackup: Please download the latest version - https://www.spigotmc.org/resources/"
-										+ resourceID + "\n");
-
 //						System.out.println("");
 //						System.out.println("ServerBackup: There is a newer version available - " + latest
 //								+ ", you are on - " + current);
@@ -113,9 +148,23 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 	}
 
-	private void loadFiles() {
-		if (!folder.exists()) {
-			folder.mkdir();
+	@SuppressWarnings("deprecation")
+	public void loadFiles() {
+		if (getConfig().contains("BackupDestination"))
+			backupDestination = getConfig().getString("BackupDestination");
+
+		if (!Files.exists(Paths.get(backupDestination))) {
+			try {
+				Files.createDirectories(Paths.get(backupDestination));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+		File files = new File(backupDestination + "//Files");
+
+		if (!files.exists()) {
+			files.mkdir();
 		}
 
 		getConfig().options()
@@ -156,8 +205,8 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		getConfig().addDefault("BackupLimiter", 0);
 
 		getConfig().addDefault("KeepUniqueBackups", false);
-
 		getConfig().addDefault("CollectiveZipFile", false);
+		getConfig().addDefault("UpdateAvailabeMessage", true);
 
 //		getConfig().addDefault("ZipCompression", true);
 
@@ -165,9 +214,21 @@ public class ServerBackup extends JavaPlugin implements Listener {
 			getConfig().set("ZipCompression", null);
 		}
 
+		if (getConfig().contains("BackupDestination")) {
+			if (getConfig().getString("BackupDestination")
+					.equalsIgnoreCase("- this feature will be available soon -")) {
+				getConfig().set("BackupDestination", null);
+			}
+		}
+
+		getConfig().addDefault("BackupDestination", "Backups//");
+
 		getConfig().addDefault("SendLogMessages", false);
+		getConfig().addDefault("FirstStart", true);
 
 		saveConfig();
+
+		backupDestination = getConfig().getString("BackupDestination");
 	}
 
 	public void startTimer() {
@@ -185,8 +246,8 @@ public class ServerBackup extends JavaPlugin implements Listener {
 	public void onJoin(PlayerJoinEvent e) {
 		Player p = e.getPlayer();
 
-		if (p.hasPermission("")) {
-			if (p.hasPermission("backup.admin")) {
+		if (p.hasPermission("backup.admin")) {
+			if (getConfig().getBoolean("UpdateAvailabeMessage")) {
 				Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
 					int resourceID = 79320;
 					try (InputStream inputStream = (new URL(

@@ -60,7 +60,7 @@ public class BackupTimer implements Runnable {
 				if (ServerBackup.getInstance().getConfig().getInt("DeleteOldBackups") <= 0)
 					return;
 
-				File[] backups = new File("Backups").listFiles();
+				File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();
 
 				if (backups.length == 0)
 					return;
@@ -79,27 +79,34 @@ public class BackupTimer implements Runnable {
 				List<String> backupNames = new ArrayList<>();
 
 				for (int i = 0; i < backups.length; i++) {
-					String[] backupDateStr = backups[i].getName().split("-");
-					LocalDate backupDate = LocalDate
-							.parse(backupDateStr[1] + "-" + backupDateStr[2] + "-" + backupDateStr[3].split("~")[0]);
-					String backupName = backupDateStr[6];
+					try {
+						String[] backupDateStr = backups[i].getName().split("-");
+						LocalDate backupDate = LocalDate.parse(
+								backupDateStr[1] + "-" + backupDateStr[2] + "-" + backupDateStr[3].split("~")[0]);
+						String backupName = backupDateStr[6];
 
-					if (ServerBackup.getInstance().getConfig().getBoolean("KeepUniqueBackups")) {
-						if (!backupNames.contains(backupName)) {
-							backupNames.add(backupName);
-							continue;
+						if (ServerBackup.getInstance().getConfig().getBoolean("KeepUniqueBackups")) {
+							if (!backupNames.contains(backupName)) {
+								backupNames.add(backupName);
+								continue;
+							}
 						}
+
+						if (backupDate.isBefore(date.plusDays(1))) {
+							if (backups[i].exists()) {
+								backups[i].delete();
+
+								ServerBackup.getInstance().getLogger().log(Level.INFO,
+										"Backup [" + backups[i].getName() + "] removed.");
+							} else {
+								ServerBackup.getInstance().getLogger().log(Level.WARNING,
+										"No Backup named '" + backups[i].getName() + "' found.");
+							}
+						}
+					} catch (Exception e) {
+						continue;
 					}
 
-					if (backupDate.isBefore(date.plusDays(1))) {
-						if (backups[i].exists()) {
-							backups[i].delete();
-
-							ServerBackup.getInstance().getLogger().log(Level.INFO, "Backup [" + backups[i].getName() + "] removed.");
-						} else {
-							ServerBackup.getInstance().getLogger().log(Level.WARNING, "No Backup named '" + backups[i].getName() + "' found.");
-						}
-					}
 //				if (backups[i].getName().contains(df.format(date))) {
 //					if (backups[i].exists()) {
 //						backups[i].delete();
@@ -117,7 +124,7 @@ public class BackupTimer implements Runnable {
 				ServerBackup.getInstance().getLogger().log(Level.INFO, "");
 			}
 		} else {
-			File[] backups = new File("Backups").listFiles();
+			File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();
 			Arrays.sort(backups);
 
 			int dobc = ServerBackup.getInstance().getConfig().getInt("BackupLimiter");
@@ -127,9 +134,11 @@ public class BackupTimer implements Runnable {
 				if (backups[c].exists()) {
 					backups[c].delete();
 
-					ServerBackup.getInstance().getLogger().log(Level.INFO, "Backup [" + backups[c].getName() + "] removed.");
+					ServerBackup.getInstance().getLogger().log(Level.INFO,
+							"Backup [" + backups[c].getName() + "] removed.");
 				} else {
-					ServerBackup.getInstance().getLogger().log(Level.WARNING, "No Backup named '" + backups[c].getName() + "' found.");
+					ServerBackup.getInstance().getLogger().log(Level.WARNING,
+							"No Backup named '" + backups[c].getName() + "' found.");
 				}
 
 				c++;

@@ -6,8 +6,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -16,6 +18,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.util.StringUtil;
+
+import com.google.common.io.Files;
 
 import de.sebli.serverbackup.BackupManager;
 import de.sebli.serverbackup.ServerBackup;
@@ -35,7 +39,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 			if (args.length == 1) {
 				if (args[0].equalsIgnoreCase("list")) {
 					Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
-						File[] backups = new File("Backups").listFiles();
+						File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();
 
 						if (backups.length == 0) {
 							sender.sendMessage("No backups found.");
@@ -86,6 +90,20 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 					ServerBackup.getInstance().stopTimer();
 					ServerBackup.getInstance().startTimer();
 
+					String oldDes = ServerBackup.getInstance().backupDestination;
+
+					if (!oldDes
+							.equalsIgnoreCase(ServerBackup.getInstance().getConfig().getString("BackupDestination"))) {
+						ServerBackup.getInstance().backupDestination = ServerBackup.getInstance().getConfig()
+								.getString("BackupDestination");
+
+						ServerBackup.getInstance().getLogger().log(Level.INFO,
+								"ServerBackup: Backup destination [" + oldDes + " >> "
+										+ ServerBackup.getInstance().backupDestination + "] updated successfully.");
+					}
+
+					ServerBackup.getInstance().loadFiles();
+
 					sender.sendMessage("Config reloaded.");
 				} else {
 					sendHelp(sender);
@@ -93,7 +111,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 			} else if (args.length == 2) {
 				if (args[0].equalsIgnoreCase("list")) {
 					Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
-						File[] backups = new File("Backups").listFiles();
+						File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();
 
 						if (backups.length == 0) {
 							sender.sendMessage("No backups found.");
@@ -161,8 +179,8 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 						return false;
 					}
 
-					File file = new File("Backups//" + filePath);
-					File newFile = new File("Backups//" + filePath + ".zip");
+					File file = new File(ServerBackup.getInstance().backupDestination + "//" + filePath);
+					File newFile = new File(ServerBackup.getInstance().backupDestination + "//" + filePath + ".zip");
 
 					if (!newFile.exists()) {
 						sender.sendMessage("Zipping Backup...");
@@ -190,15 +208,17 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 						return false;
 					}
 
-					File file = new File("Backups//" + filePath);
-					File newFile = new File("Backups//" + filePath.replaceAll(".zip", ""));
+					File file = new File(ServerBackup.getInstance().backupDestination + "//" + filePath);
+					File newFile = new File(
+							ServerBackup.getInstance().backupDestination + "//" + filePath.replaceAll(".zip", ""));
 
 					if (!newFile.exists()) {
 						sender.sendMessage("Unzipping Backup...");
 						sender.sendMessage("");
 
 						if (file.exists()) {
-							ZipManager zm = new ZipManager(file.getPath(), "Backups//" + newFile.getName(), sender,
+							ZipManager zm = new ZipManager(file.getPath(),
+									ServerBackup.getInstance().backupDestination + "//" + newFile.getName(), sender,
 									false, true);
 
 							zm.unzip();
@@ -209,16 +229,52 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 						sender.sendMessage("There is already a ZIP file named '" + args[1] + ".zip'");
 					}
 				} else if (args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("remove")) {
+					if (args[1].equalsIgnoreCase("Files")) {
+						sender.sendMessage("You can not delete the 'Files' backup folder.");
+
+						return false;
+					}
+
 					BackupManager bm = new BackupManager(args[1], sender);
 
 					bm.removeBackup();
 				} else if (args[0].equalsIgnoreCase("create")) {
-					BackupManager bm = new BackupManager(args[1], sender);
+					File file = new File(args[1]);
+					if (!file.isDirectory()) {
+						Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), new Runnable() {
 
-					bm.createBackup();
+							@Override
+							public void run() {
+								try {
+									File des = new File(ServerBackup.getInstance().backupDestination + "//Files//"
+											+ args[1].replaceAll("/", "-"));
+
+									if (des.exists()) {
+										des = new File(des.getPath()
+												.replaceAll("." + FilenameUtils.getExtension(des.getName()), "") + " "
+												+ String.valueOf(System.currentTimeMillis() / 1000) + "."
+												+ FilenameUtils.getExtension(file.getName()));
+									}
+
+									Files.copy(file, des);
+
+									sender.sendMessage("Backup [" + args[1] + "] saved.");
+								} catch (IOException e) {
+									sender.sendMessage("An error occured while saving Backup [" + args[1]
+											+ "]. See console for more information.");
+									e.printStackTrace();
+								}
+							}
+
+						});
+					} else {
+						BackupManager bm = new BackupManager(args[1], sender);
+
+						bm.createBackup();
+					}
 				} else if (args[0].equalsIgnoreCase("search")) {
 					Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
-						File[] backups = new File("Backups").listFiles();
+						File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();
 
 						if (backups.length == 0) {
 							sender.sendMessage("No backups found.");
@@ -290,7 +346,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 			} else if (args.length == 3) {
 				if (args[0].equalsIgnoreCase("search")) {
 					Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
-						File[] backups = new File("Backups").listFiles();
+						File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();
 
 						if (backups.length == 0) {
 							sender.sendMessage("No backups found.");
@@ -415,7 +471,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 				StringUtil.copyPartialMatches(args[0], commands, completions);
 			} else if (args.length == 2) {
 				if (args[0].equalsIgnoreCase("list")) {
-					File[] backups = new File("Backups").listFiles();
+					File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();
 
 					int maxPages = backups.length / 10;
 
@@ -427,7 +483,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 						commands.add(String.valueOf(i));
 					}
 				} else if (args[0].equalsIgnoreCase("remove")) {
-					File[] backups = new File("Backups").listFiles();
+					File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();
 
 					for (int i = 0; i < backups.length; i++) {
 						commands.add(backups[i].getName());
@@ -437,7 +493,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 						commands.add(world.getName());
 					}
 				} else if (args[0].equalsIgnoreCase("zip")) {
-					File[] backups = new File("Backups").listFiles();
+					File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();
 
 					for (File backup : backups) {
 						if (!backup.getName().endsWith(".zip")) {
@@ -445,7 +501,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 						}
 					}
 				} else if (args[0].equalsIgnoreCase("unzip")) {
-					File[] backups = new File("Backups").listFiles();
+					File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();
 
 					for (File backup : backups) {
 						if (backup.getName().endsWith(".zip")) {
