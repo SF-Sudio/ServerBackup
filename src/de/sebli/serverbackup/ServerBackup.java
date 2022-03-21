@@ -68,28 +68,29 @@ public class ServerBackup extends JavaPlugin implements Listener {
 			checkVersion();
 		}
 
-		if (getConfig().getBoolean("FirstStart")) {
-			if (System.getProperty("os.name").startsWith("Windows")) {
-				Bukkit.getScheduler().runTaskLater(this, new Runnable() {
-					@Override
-					public void run() {
-						ServerBackup.getInstance().getLogger().log(Level.WARNING,
-								"ServerBackup: Seems like you running this plugin on Windows. Please keep in mind, that this plugin does not support Windows officially. It may work fine, but some features might not work properly.");
-						getConfig().set("FirstStart", false);
-					}
-				}, 30);
-			} else {
-				getConfig().set("FirstStart", false);
-			}
-			saveConfig();
-		}
-
 		int mpid = 14673;
 
 		Metrics metrics = new Metrics(this, mpid);
 
-		metrics.addCustomChart(new Metrics.SingleLineChart("total_backup_space", new Callable<Integer>() {
+		metrics.addCustomChart(new Metrics.SimplePie("player_per_server", new Callable<String>() {
+			@Override
+			public String call() throws Exception {
+				return String.valueOf(Bukkit.getOnlinePlayers().size());
+			}
+		}));
 
+		metrics.addCustomChart(new Metrics.SimplePie("using_ftp_server", new Callable<String>() {
+			@Override
+			public String call() throws Exception {
+				if (getConfig().getBoolean("Ftp.UploadBackup")) {
+					return "yes";
+				} else {
+					return "no";
+				}
+			}
+		}));
+
+		metrics.addCustomChart(new Metrics.SingleLineChart("total_backup_space", new Callable<Integer>() {
 			@Override
 			public Integer call() throws Exception {
 				File file = new File(backupDestination);
@@ -99,7 +100,6 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 				return (int) fileSize;
 			}
-
 		}));
 	}
 
@@ -174,7 +174,10 @@ public class ServerBackup extends JavaPlugin implements Listener {
 						+ "\nBackupLimiter = Deletes old backups automatically if number of total backups is greater than this number (e.g. if you enter '5' - the oldest backup will be deleted if there are more than 5 backups, so you will always keep the latest 5 backups)"
 						+ "\nBackupLimiter - Type '0' to disable this feature. If you don't type '0' the feature 'DeleteOldBackups' will be disabled and this feature ('BackupLimiter') will be enabled."
 						+ "\nKeepUniqueBackups - Type 'true' to disable the deletion of unique backups. The plugin will keep the newest backup of all backed up worlds or folders, no matter how old it is."
-						+ "\nCollectiveZipFile - Type 'true' if you want to have all backed up worlds in just one zip file.");
+						+ "\nCollectiveZipFile - Type 'true' if you want to have all backed up worlds in just one zip file.\n"
+						+ "\nIMPORTANT FTP information [BETA feature]: Set 'UploadBackup' to 'true' if you want to store your backups on a ftp server (sftp does not work at the moment - if you host your own server (e.g. vps/root server) you need to set up a ftp server on it)."
+						+ "\nIf you use ftp backups, you can set 'DeleteLocalBackup' to 'true' if you want the plugin to remove the created backup from your server once it has been uploaded to your ftp server."
+						+ "\nContact me if you need help or have a question: https://www.spigotmc.org/conversations/add?to=SebliYT");
 		getConfig().options().copyDefaults(true);
 
 		getConfig().addDefault("AutomaticBackups", true);
@@ -201,7 +204,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 		getConfig().addDefault("BackupWorlds", worlds);
 
-		getConfig().addDefault("DeleteOldBackups", 7);
+		getConfig().addDefault("DeleteOldBackups", 14);
 		getConfig().addDefault("BackupLimiter", 0);
 
 		getConfig().addDefault("KeepUniqueBackups", false);
@@ -223,8 +226,18 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 		getConfig().addDefault("BackupDestination", "Backups//");
 
+		getConfig().addDefault("Ftp.UploadBackup", false);
+		getConfig().addDefault("Ftp.DeleteLocalBackup", false);
+		getConfig().addDefault("Ftp.Server.IP", "127.0.0.1");
+		getConfig().addDefault("Ftp.Server.Port", 21);
+		getConfig().addDefault("Ftp.Server.User", "username");
+		getConfig().addDefault("Ftp.Server.Password", "password");
+
 		getConfig().addDefault("SendLogMessages", false);
-		getConfig().addDefault("FirstStart", true);
+
+		if (getConfig().contains("FirstStart")) {
+			getConfig().set("FirstStart", null);
+		}
 
 		saveConfig();
 

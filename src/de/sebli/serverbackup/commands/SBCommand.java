@@ -22,6 +22,7 @@ import org.bukkit.util.StringUtil;
 import com.google.common.io.Files;
 
 import de.sebli.serverbackup.BackupManager;
+import de.sebli.serverbackup.FtpManager;
 import de.sebli.serverbackup.ServerBackup;
 import de.sebli.serverbackup.ZipManager;
 import net.md_5.bungee.api.chat.ClickEvent;
@@ -60,14 +61,15 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 							double fileSize = (double) FileUtils.sizeOf(backups[i]) / 1000 / 1000;
 							fileSize = Math.round(fileSize * 100.0) / 100.0;
 
-							TextComponent msg = new TextComponent("§7[" + Integer.valueOf(i + 1) + "] §r"
-									+ backups[i].getName() + " §7[" + fileSize + "MB]");
-							msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-									new ComponentBuilder("Click to get Backup name").create()));
-							msg.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, backups[i].getName()));
-
 							if (sender instanceof Player) {
 								Player p = (Player) sender;
+
+								TextComponent msg = new TextComponent("§7[" + Integer.valueOf(i + 1) + "] §r"
+										+ backups[i].getName() + " §7[" + fileSize + "MB]");
+								msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+										new ComponentBuilder("Click to get Backup name").create()));
+								msg.setClickEvent(
+										new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, backups[i].getName()));
 
 								p.spigot().sendMessage(msg);
 							} else {
@@ -143,15 +145,15 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 								double fileSize = (double) FileUtils.sizeOf(backups[i]) / 1000 / 1000;
 								fileSize = Math.round(fileSize * 100.0) / 100.0;
 
-								TextComponent msg = new TextComponent("§7[" + Integer.valueOf(i + 1) + "] §r"
-										+ backups[i].getName() + " §7[" + fileSize + "MB]");
-								msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-										new ComponentBuilder("Click to get Backup name").create()));
-								msg.setClickEvent(
-										new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, backups[i].getName()));
-
 								if (sender instanceof Player) {
 									Player p = (Player) sender;
+
+									TextComponent msg = new TextComponent("§7[" + Integer.valueOf(i + 1) + "] §r"
+											+ backups[i].getName() + " §7[" + fileSize + "MB]");
+									msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+											new ComponentBuilder("Click to get Backup name").create()));
+									msg.setClickEvent(
+											new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, backups[i].getName()));
 
 									p.spigot().sendMessage(msg);
 								} else {
@@ -171,6 +173,52 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 							sender.sendMessage("'" + args[1] + "' is not a valid number.");
 						}
 					});
+				} else if (args[0].equalsIgnoreCase("ftp")) {
+					if (args[1].equalsIgnoreCase("list")) {
+						Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
+							FtpManager ftpm = new FtpManager(sender);
+
+							List<String> backups = ftpm.getFtpBackupList();
+
+							if (backups.size() == 0) {
+								sender.sendMessage("No ftp backups found.");
+
+								return;
+							}
+
+							if (backups.size() < 10) {
+								sender.sendMessage(
+										"----- Ftp-Backup 1-" + backups.size() + "/" + backups.size() + " -----");
+							} else {
+								sender.sendMessage("----- Ftp-Backup 1-10/" + backups.size() + " -----");
+							}
+							sender.sendMessage("");
+
+							for (int i = 0; i < backups.size() && i < 10; i++) {
+								if (sender instanceof Player) {
+									Player p = (Player) sender;
+									TextComponent msg = new TextComponent(backups.get(i));
+									msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+											new ComponentBuilder("Click to get Backup name").create()));
+									msg.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+											backups.get(i).split(" ")[1]));
+
+									p.spigot().sendMessage(msg);
+								} else {
+									sender.sendMessage(backups.get(i));
+								}
+							}
+
+							int maxPages = backups.size() / 10;
+
+							if (backups.size() % 10 != 0) {
+								maxPages++;
+							}
+
+							sender.sendMessage("");
+							sender.sendMessage("--------- Page 1/" + maxPages + " ---------");
+						});
+					}
 				} else if (args[0].equalsIgnoreCase("zip")) {
 					String filePath = args[1];
 
@@ -425,6 +473,80 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 							sender.sendMessage("'" + args[2] + "' is not a valid number.");
 						}
 					});
+				} else if (args[0].equalsIgnoreCase("ftp")) {
+					if (args[1].equalsIgnoreCase("list")) {
+						Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
+							FtpManager ftpm = new FtpManager(sender);
+
+							List<String> backups = ftpm.getFtpBackupList();
+
+							if (backups.size() == 0) {
+								sender.sendMessage("No ftp backups found.");
+
+								return;
+							}
+
+							try {
+								int page = Integer.valueOf(args[2]);
+
+								if (backups.size() < page * 10 - 9) {
+									sender.sendMessage("Try a lower value.");
+
+									return;
+								}
+
+								if (backups.size() <= page * 10 && backups.size() >= page * 10 - 10) {
+									sender.sendMessage("----- Ftp-Backup " + Integer.valueOf(page * 10 - 9) + "-"
+											+ backups.size() + "/" + backups.size() + " -----");
+								} else {
+									sender.sendMessage("----- Ftp-Backup " + Integer.valueOf(page * 10 - 9) + "-"
+											+ Integer.valueOf(page * 10) + "/" + backups.size() + " -----");
+								}
+								sender.sendMessage("");
+
+								for (int i = page * 10 - 10; i < backups.size() && i < page * 10; i++) {
+									if (sender instanceof Player) {
+										Player p = (Player) sender;
+
+										TextComponent msg = new TextComponent(backups.get(i));
+										msg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+												new ComponentBuilder("Click to get Backup name").create()));
+										msg.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+												backups.get(i).split(" ")[1]));
+
+										p.spigot().sendMessage(msg);
+									} else {
+										sender.sendMessage(backups.get(i));
+									}
+								}
+
+								int maxPages = backups.size() / 10;
+
+								if (backups.size() % 10 != 0) {
+									maxPages++;
+								}
+
+								sender.sendMessage("");
+								sender.sendMessage("--------- Page " + page + "/" + maxPages + " ---------");
+							} catch (Exception e) {
+								sender.sendMessage("'" + args[1] + "' is not a valid number.");
+							}
+						});
+					} else if (args[1].equalsIgnoreCase("download")) {
+						Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
+							FtpManager ftpm = new FtpManager(sender);
+
+							ftpm.downloadFileFromFtp(args[2]);
+						});
+					} else if (args[1].equalsIgnoreCase("upload")) {
+						Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
+							FtpManager ftpm = new FtpManager(sender);
+
+							ftpm.uploadFileToFtp(args[2]);
+						});
+					}
+				} else {
+					sendHelp(sender);
 				}
 			} else {
 				sendHelp(sender);
@@ -451,6 +573,9 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 		sender.sendMessage("/backup zip <folder> - zipping folder");
 		sender.sendMessage("");
 		sender.sendMessage("/backup unzip <file> - unzipping file");
+		sender.sendMessage("");
+		sender.sendMessage(
+				"/backup ftp <download/upload/list> - download, upload or list ftp backup files [BETA feature]");
 	}
 
 	@Override
@@ -467,6 +592,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 				commands.add("remove");
 				commands.add("zip");
 				commands.add("unzip");
+				commands.add("ftp");
 
 				StringUtil.copyPartialMatches(args[0], commands, completions);
 			} else if (args.length == 2) {
@@ -508,9 +634,49 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 							commands.add(backup.getName());
 						}
 					}
+				} else if (args[0].equalsIgnoreCase("ftp")) {
+					commands.add("list");
+					commands.add("download");
+					commands.add("upload");
 				}
 
 				StringUtil.copyPartialMatches(args[1], commands, completions);
+			} else if (args.length == 3) {
+				if (args[0].equalsIgnoreCase("ftp")) {
+					if (args[1].equalsIgnoreCase("list")) {
+						FtpManager ftpm = new FtpManager(sender);
+
+						List<String> backups = ftpm.getFtpBackupList();
+
+						int maxPages = backups.size() / 10;
+
+						if (backups.size() % 10 != 0) {
+							maxPages++;
+						}
+
+						for (int i = 1; i < maxPages + 1; i++) {
+							commands.add(String.valueOf(i));
+						}
+					} else if (args[1].equalsIgnoreCase("download")) {
+						FtpManager ftpm = new FtpManager(sender);
+
+						List<String> backups = ftpm.getFtpBackupList();
+
+						for (String backup : backups) {
+							commands.add(backup.split(" ")[1]);
+						}
+					} else if (args[1].equalsIgnoreCase("upload")) {
+						File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();
+
+						for (File backup : backups) {
+							if (backup.getName().endsWith(".zip")) {
+								commands.add(backup.getName());
+							}
+						}
+					}
+				}
+
+				StringUtil.copyPartialMatches(args[2], commands, completions);
 			}
 		}
 

@@ -68,7 +68,17 @@ public class ZipManager {
 						}
 
 						zs.putNextEntry(zipEntry);
-						Files.copy(path, zs);
+
+						if (System.getProperty("os.name").startsWith("Windows")
+								&& path.toString().contains("session.lock")) {
+						} else {
+							try {
+								Files.copy(path, zs);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+
 						zs.closeEntry();
 					} catch (IOException e) {
 						e.printStackTrace();
@@ -101,6 +111,11 @@ public class ZipManager {
 			sender.sendMessage("");
 			sender.sendMessage("Backup [" + sourceFilePath + "] zipped.");
 			sender.sendMessage("Backup [" + sourceFilePath + "] saved.");
+
+			if (ServerBackup.getInstance().getConfig().getBoolean("Ftp.UploadBackup")) {
+				FtpManager ftpm = new FtpManager(sender);
+				ftpm.uploadFileToFtp(targetFilePath);
+			}
 
 			for (Player all : Bukkit.getOnlinePlayers()) {
 				if (all.hasPermission("backup.notification")) {
