@@ -97,15 +97,6 @@ public class BackupTimer implements Runnable {
                     } catch (Exception ignored) {
                     }
 
-//				if (backups[i].getName().contains(df.format(date))) {
-//					if (backups[i].exists()) {
-//						backups[i].delete();
-//
-//						System.out.println("Backup [" + backups[i].getName() + "] removed.");
-//					} else {
-//						System.out.println("No Backup named '" + backups[i].getName() + "' found.");
-//					}
-//				}
                 }
 
                 ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Backup deletion finished. ["

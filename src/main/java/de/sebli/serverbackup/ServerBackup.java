@@ -43,7 +43,6 @@ public class ServerBackup extends JavaPlugin implements Listener {
         }
 
         this.getLogger().log(Level.INFO, "ServerBackup: Plugin disabled.");
-//		System.out.println("ServerBackup: Plugin disabled.");
     }
 
     @Override
@@ -59,7 +58,6 @@ public class ServerBackup extends JavaPlugin implements Listener {
         startTimer();
 
         this.getLogger().log(Level.INFO, "ServerBackup: Plugin enabled.");
-//		System.out.println("ServerBackup: Plugin enabled.");
 
         if (getConfig().getBoolean("UpdateAvailabeMessage")) {
             checkVersion();
@@ -184,8 +182,6 @@ public class ServerBackup extends JavaPlugin implements Listener {
         getConfig().addDefault("KeepUniqueBackups", false);
         getConfig().addDefault("CollectiveZipFile", false);
         getConfig().addDefault("UpdateAvailabeMessage", true);
-
-//		getConfig().addDefault("ZipCompression", true);
 
         if (getConfig().contains("ZipCompression")) {
             getConfig().set("ZipCompression", null);
