@@ -33,7 +33,6 @@ public class SBCommand implements CommandExecutor, TabCompleter {
     @SuppressWarnings("deprecation")
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-
         if (sender.hasPermission("backup.admin")) {
             if (args.length == 1) {
                 if (args[0].equalsIgnoreCase("list")) {

@@ -1,6 +1,5 @@
 package de.sebli.serverbackup;
 
-import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -39,9 +38,7 @@ public class ZipManager {
 
             long sTime = System.nanoTime();
 
-            ServerBackup.getInstance().getLogger().log(Level.INFO, "");
             ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Start zipping...");
-            ServerBackup.getInstance().getLogger().log(Level.INFO, "");
 
             Path p;
             try {
@@ -92,21 +89,18 @@ public class ZipManager {
 
             long time = (System.nanoTime() - sTime) / 1000000;
 
-            ServerBackup.getInstance().getLogger().log(Level.INFO, "");
             ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Files zipped. [" + time + "ms]");
-            ServerBackup.getInstance().getLogger().log(Level.INFO, "");
 
             if (!isSaving) {
                 File file = new File(sourceFilePath);
 
                 try {
-                    FileUtils.deleteDirectory(file);
+                    Files.delete(file.toPath());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
 
-            sender.sendMessage("");
             sender.sendMessage("Backup [" + sourceFilePath + "] zipped.");
             sender.sendMessage("Backup [" + sourceFilePath + "] saved.");
 
@@ -128,9 +122,7 @@ public class ZipManager {
 
             long sTime = System.nanoTime();
 
-            ServerBackup.getInstance().getLogger().log(Level.INFO, "");
             ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Start unzipping...");
-            ServerBackup.getInstance().getLogger().log(Level.INFO, "");
 
             byte[] buffer = new byte[1024];
             try {
@@ -173,15 +165,12 @@ public class ZipManager {
 
             long time = (System.nanoTime() - sTime) / 1000000;
 
-            ServerBackup.getInstance().getLogger().log(Level.INFO, "");
             ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Files unzipped. [" + time + "ms]");
-            ServerBackup.getInstance().getLogger().log(Level.INFO, "");
 
             File file = new File(sourceFilePath);
 
             file.delete();
 
-            sender.sendMessage("");
             sender.sendMessage("Backup [" + sourceFilePath + "] unzipped.");
         });
     }

@@ -107,28 +107,17 @@ public class ServerBackup extends JavaPlugin implements Listener {
                     if (curr >= late) {
                         this.getLogger().log(Level.INFO,
                                 "ServerBackup: No updates found. The server is running the latest version.");
-
-//						System.out.println("ServerBackup: No updates found. The server is running the latest version.");
                     } else {
                         this.getLogger().log(Level.INFO, "\nServerBackup: There is a newer version available - "
                                 + latest + ", you are on - " + current);
                         this.getLogger().log(Level.INFO,
                                 "ServerBackup: Please download the latest version - https://www.spigotmc.org/resources/"
                                         + resourceID + "\n");
-
-//						System.out.println("");
-//						System.out.println("ServerBackup: There is a newer version available - " + latest
-//								+ ", you are on - " + current);
-//						System.out.println(
-//								"ServerBackup: Please download the latest version - https://www.spigotmc.org/resources/"
-//										+ resourceID);
-//						System.out.println("");
                     }
                 }
             } catch (IOException exception) {
                 this.getLogger().log(Level.WARNING,
                         "ServerBackup: Cannot search for updates - " + exception.getMessage());
-//				System.err.println("ServerBackup: Cannot search for updates - " + exception.getMessage());
             }
         });
 

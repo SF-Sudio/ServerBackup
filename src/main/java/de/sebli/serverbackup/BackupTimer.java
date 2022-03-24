@@ -13,7 +13,7 @@ public class BackupTimer implements Runnable {
     final List<String> days = ServerBackup.getInstance().getConfig().getStringList("BackupTimer.Days");
     final List<String> times = ServerBackup.getInstance().getConfig().getStringList("BackupTimer.Times");
 
-    Calendar cal = Calendar.getInstance();
+    final Calendar cal = Calendar.getInstance();
 
     @Override
     public void run() {
@@ -63,9 +63,7 @@ public class BackupTimer implements Runnable {
                 LocalDate date = LocalDate.now()
                         .minusDays(ServerBackup.getInstance().getConfig().getInt("DeleteOldBackups"));
 
-                ServerBackup.getInstance().getLogger().log(Level.INFO, "");
                 ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Backup deletion started...");
-                ServerBackup.getInstance().getLogger().log(Level.INFO, "");
 
                 long time = System.currentTimeMillis();
 
@@ -110,10 +108,8 @@ public class BackupTimer implements Runnable {
 //				}
                 }
 
-                ServerBackup.getInstance().getLogger().log(Level.INFO, "");
                 ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Backup deletion finished. ["
                         + (System.currentTimeMillis() - time) + "ms]");
-                ServerBackup.getInstance().getLogger().log(Level.INFO, "");
             }
         } else {
             File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();

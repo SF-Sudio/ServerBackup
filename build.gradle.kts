@@ -17,8 +17,8 @@ repositories {
 
 dependencies {
     compileOnly("org.spigotmc:spigot-api:1.18-R0.1-SNAPSHOT")
-    compileOnly("commons-io:commons-io:2.11.0")
-    compileOnly("commons-net:commons-net:3.8.0")
+    implementation("commons-io:commons-io:2.11.0")
+    implementation("commons-net:commons-net:3.8.0")
     compileOnly("org.junit.jupiter:junit-jupiter:5.8.2")
 }
 
@@ -42,5 +42,11 @@ tasks {
     }
     test {
         useJUnitPlatform()
+    }
+    jar {
+        val dependencies = configurations.runtimeClasspath.get().map(::zipTree)
+        from(dependencies)
+        exclude("META-INF/LICENSE.txt", "META-INF/NOTICE.txt", "META-INF/maven/**")
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     }
 }

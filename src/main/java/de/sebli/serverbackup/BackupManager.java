@@ -1,12 +1,12 @@
 package de.sebli.serverbackup;
 
-import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
@@ -65,7 +65,7 @@ public class BackupManager {
             if (file.exists()) {
                 if (file.isDirectory()) {
                     try {
-                        FileUtils.deleteDirectory(file);
+                        Files.delete(file.toPath());
 
                         sender.sendMessage("Backup [" + filePath + "] removed.");
                     } catch (IOException e) {
