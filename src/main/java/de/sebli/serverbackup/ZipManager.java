@@ -122,7 +122,7 @@ public class ZipManager {
 
             long sTime = System.nanoTime();
 
-            ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Start unzipping: " + sourceFilePath);
+            ServerBackup.getInstance().getLogger().log(Level.INFO, "ServerBackup | Started unzipping: " + sourceFilePath);
 
             byte[] buffer = new byte[1024];
             try {
