@@ -147,8 +147,10 @@ public class ZipManager {
                     }
 
                     new File(newFile.getParent()).mkdirs();
-                    if (!newFile.toPath().normalize().startsWith(destinationDir.toPath()))
+                    Bukkit.getLogger().info(targetFilePath);
+                    if (!newFile.toPath().normalize().startsWith(targetFilePath)) {
                         throw new Exception("Bad zip entry");
+                    }
                     FileOutputStream fos = new FileOutputStream(newFile);
                     int len;
                     while ((len = zis.read(buffer)) > 0) {
