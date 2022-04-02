@@ -147,7 +147,6 @@ public class ZipManager {
                     }
 
                     new File(newFile.getParent()).mkdirs();
-                    Bukkit.getLogger().info(targetFilePath);
                     if (!newFile.toPath().normalize().startsWith(targetFilePath)) {
                         throw new Exception("Bad zip entry");
                     }
@@ -161,7 +160,7 @@ public class ZipManager {
                 }
                 zis.closeEntry();
                 zis.close();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 ServerBackup.getInstance().getLogger().log(Level.WARNING, "Error while unzipping files.");
                 return;

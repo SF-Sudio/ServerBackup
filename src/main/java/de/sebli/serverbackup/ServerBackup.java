@@ -17,9 +17,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.logging.Level;
 
 public class ServerBackup extends JavaPlugin implements Listener {
@@ -59,7 +57,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
         this.getLogger().log(Level.INFO, "ServerBackup: Plugin enabled.");
 
-        if (getConfig().getBoolean("UpdateAvailabeMessage")) {
+        if (getConfig().getBoolean("UpdateAvailableMessage")) {
             checkVersion();
         }
 
@@ -181,7 +179,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
         getConfig().addDefault("KeepUniqueBackups", false);
         getConfig().addDefault("CollectiveZipFile", false);
-        getConfig().addDefault("UpdateAvailabeMessage", true);
+        getConfig().addDefault("UpdateAvailableMessage", true);
 
         if (getConfig().contains("ZipCompression")) {
             getConfig().set("ZipCompression", null);
@@ -230,7 +228,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
         Player p = e.getPlayer();
 
         if (p.hasPermission("backup.admin")) {
-            if (getConfig().getBoolean("UpdateAvailabeMessage")) {
+            if (getConfig().getBoolean("UpdateAvailableMessage")) {
                 Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
                     int resourceID = 79320;
                     try (InputStream inputStream = (new URL(
