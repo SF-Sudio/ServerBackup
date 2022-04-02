@@ -3,7 +3,9 @@ name: ServerBackup
 version: $version
 description: A backup plugin for instant backup creation with little to no performance impact
 load: STARTUP
-author: Seblii
+authors:
+  - Seblii
+  - onetwoeight
 website: https://github.com/128931/ServerBackup
 api-version: 1.18
 
