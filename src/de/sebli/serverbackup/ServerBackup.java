@@ -1,19 +1,23 @@
 package de.sebli.serverbackup;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.logging.Level;
 import java.util.concurrent.Callable;
+import java.util.logging.Level;
 
 import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -34,6 +38,11 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 	public String backupDestination = "Backups//";
 
+	File backupInfo = new File("plugins//ServerBackup//backupInfo.yml");
+	YamlConfiguration bpInf = YamlConfiguration.loadConfiguration(backupInfo);
+
+	boolean isUpdated = false;
+
 	@Override
 	public void onDisable() {
 		stopTimer();
@@ -46,7 +55,6 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		}
 
 		this.getLogger().log(Level.INFO, "ServerBackup: Plugin disabled.");
-//		System.out.println("ServerBackup: Plugin disabled.");
 	}
 
 	@Override
@@ -58,13 +66,13 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		getCommand("backup").setExecutor(new SBCommand());
 
 		Bukkit.getPluginManager().registerEvents(this, this);
+		Bukkit.getPluginManager().registerEvents(new DynamicBackup(), this);
 
 		startTimer();
 
 		this.getLogger().log(Level.INFO, "ServerBackup: Plugin enabled.");
-//		System.out.println("ServerBackup: Plugin enabled.");
 
-		if (getConfig().getBoolean("UpdateAvailabeMessage")) {
+		if (getConfig().getBoolean("UpdateAvailableMessage")) {
 			checkVersion();
 		}
 
@@ -121,28 +129,41 @@ public class ServerBackup extends JavaPlugin implements Listener {
 					if (curr >= late) {
 						this.getLogger().log(Level.INFO,
 								"ServerBackup: No updates found. The server is running the latest version.");
-
-//						System.out.println("ServerBackup: No updates found. The server is running the latest version.");
 					} else {
-						this.getLogger().log(Level.INFO, "\nServerBackup: There is a newer version available - "
-								+ latest + ", you are on - " + current);
-						this.getLogger().log(Level.INFO,
-								"ServerBackup: Please download the latest version - https://www.spigotmc.org/resources/"
-										+ resourceID + "\n");
+						this.getLogger().log(Level.INFO, "ServerBackup: There is a newer version available - " + latest
+								+ ", you are on - " + current);
 
-//						System.out.println("");
-//						System.out.println("ServerBackup: There is a newer version available - " + latest
-//								+ ", you are on - " + current);
-//						System.out.println(
-//								"ServerBackup: Please download the latest version - https://www.spigotmc.org/resources/"
-//										+ resourceID);
-//						System.out.println("");
+						if (getConfig().getBoolean("AutomaticUpdates")) {
+							this.getLogger().log(Level.INFO, "ServerBackup: Downloading newest version...");
+
+							URL url = new URL("https://server-backup.net/assets/downloads/ServerBackup.jar");
+
+							int bVer = Integer
+									.parseInt(Bukkit.getVersion().split(" ")[Bukkit.getVersion().split(" ").length - 1]
+											.replaceAll("\\)", "").replaceAll("\\.", ""));
+							if (bVer < 118) {
+								url = new URL("https://server-backup.net/assets/downloads/alt/ServerBackup.jar");
+							}
+
+							try (InputStream in = url.openStream();
+									ReadableByteChannel rbc = Channels.newChannel(in);
+									FileOutputStream fos = new FileOutputStream("plugins/ServerBackup.jar")) {
+								fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+
+								this.getLogger().log(Level.INFO,
+										"ServerBackup: Download finished. Please reload the server to complete the update.");
+
+								isUpdated = true;
+							}
+						} else {
+							this.getLogger().log(Level.INFO,
+									"ServerBackup: Please download the latest version - https://server-backup.net/");
+						}
 					}
 				}
 			} catch (IOException exception) {
 				this.getLogger().log(Level.WARNING,
 						"ServerBackup: Cannot search for updates - " + exception.getMessage());
-//				System.err.println("ServerBackup: Cannot search for updates - " + exception.getMessage());
 			}
 		});
 
@@ -174,10 +195,11 @@ public class ServerBackup extends JavaPlugin implements Listener {
 						+ "\nBackupLimiter = Deletes old backups automatically if number of total backups is greater than this number (e.g. if you enter '5' - the oldest backup will be deleted if there are more than 5 backups, so you will always keep the latest 5 backups)"
 						+ "\nBackupLimiter - Type '0' to disable this feature. If you don't type '0' the feature 'DeleteOldBackups' will be disabled and this feature ('BackupLimiter') will be enabled."
 						+ "\nKeepUniqueBackups - Type 'true' to disable the deletion of unique backups. The plugin will keep the newest backup of all backed up worlds or folders, no matter how old it is."
-						+ "\nCollectiveZipFile - Type 'true' if you want to have all backed up worlds in just one zip file.\n"
-						+ "\nIMPORTANT FTP information [BETA feature]: Set 'UploadBackup' to 'true' if you want to store your backups on a ftp server (sftp does not work at the moment - if you host your own server (e.g. vps/root server) you need to set up a ftp server on it)."
+						+ "\nBlacklist - A list of files/directories that will not be backed up."
+//						+ "\nCollectiveZipFile - Type 'true' if you want to have all backed up worlds in just one zip file.\n"
+						+ "\nIMPORTANT FTP information: Set 'UploadBackup' to 'true' if you want to store your backups on a ftp server (sftp does not work at the moment - if you host your own server (e.g. vps/root server) you need to set up a ftp server on it)."
 						+ "\nIf you use ftp backups, you can set 'DeleteLocalBackup' to 'true' if you want the plugin to remove the created backup from your server once it has been uploaded to your ftp server."
-						+ "\nContact me if you need help or have a question: https://www.spigotmc.org/conversations/add?to=SebliYT");
+						+ "\nContact me if you need help or have a question: https://server-backup.net/#support");
 		getConfig().options().copyDefaults(true);
 
 		getConfig().addDefault("AutomaticBackups", true);
@@ -204,17 +226,27 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 		getConfig().addDefault("BackupWorlds", worlds);
 
+		List<String> blacklist = new ArrayList<>();
+		blacklist.add("libraries");
+		blacklist.add("plugins/ServerBackup/config.yml");
+
+		getConfig().addDefault("Blacklist", blacklist);
+
 		getConfig().addDefault("DeleteOldBackups", 14);
 		getConfig().addDefault("BackupLimiter", 0);
 
 		getConfig().addDefault("KeepUniqueBackups", false);
-		getConfig().addDefault("CollectiveZipFile", false);
-		getConfig().addDefault("UpdateAvailabeMessage", true);
+//		getConfig().addDefault("CollectiveZipFile", false);
+		if (getConfig().contains("CollectiveZipFile")) {
+			getConfig().set("CollectiveZipFile", null);
+		}
 
-//		getConfig().addDefault("ZipCompression", true);
+		getConfig().addDefault("UpdateAvailableMessage", true);
+		getConfig().addDefault("AutomaticUpdates", true);
 
-		if (getConfig().contains("ZipCompression")) {
-			getConfig().set("ZipCompression", null);
+		if (getConfig().contains("UpdateAvailabeMessage")) {
+			getConfig().set("UpdateAvailableMessage", getConfig().getBoolean("UpdateAvailabeMessage"));
+			getConfig().set("UpdateAvailabeMessage", null);
 		}
 
 		if (getConfig().contains("BackupDestination")) {
@@ -232,7 +264,10 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		getConfig().addDefault("Ftp.Server.Port", 21);
 		getConfig().addDefault("Ftp.Server.User", "username");
 		getConfig().addDefault("Ftp.Server.Password", "password");
+		getConfig().addDefault("Ftp.Server.BackupDirectory", "Backups/");
 
+		getConfig().addDefault("CheckWorldChange", false);
+		getConfig().addDefault("DynamicBackup", false);
 		getConfig().addDefault("SendLogMessages", false);
 
 		if (getConfig().contains("FirstStart")) {
@@ -242,6 +277,34 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		saveConfig();
 
 		backupDestination = getConfig().getString("BackupDestination");
+
+		if (getConfig().getBoolean("DynamicBackup")) {
+			loadBpInf();
+		}
+	}
+
+	public void loadBpInf() {
+		if (!backupInfo.exists()) {
+			try {
+				backupInfo.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+		try {
+			bpInf.save(backupInfo);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void saveBpInf() {
+		try {
+			bpInf.save(backupInfo);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void startTimer() {
@@ -259,8 +322,8 @@ public class ServerBackup extends JavaPlugin implements Listener {
 	public void onJoin(PlayerJoinEvent e) {
 		Player p = e.getPlayer();
 
-		if (p.hasPermission("backup.admin")) {
-			if (getConfig().getBoolean("UpdateAvailabeMessage")) {
+		if (p.hasPermission("backup.update")) {
+			if (getConfig().getBoolean("UpdateAvailableMessage")) {
 				Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
 					int resourceID = 79320;
 					try (InputStream inputStream = (new URL(
@@ -275,15 +338,62 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 							if (curr >= late) {
 							} else {
-								p.sendMessage("§8=====§fServerBackup§8=====");
-								p.sendMessage("");
-								p.sendMessage("§7There is a newer version available - §a" + latest
-										+ "§7, you are on - §c" + current);
-								p.sendMessage(
-										"§7Please download the latest version - §4https://www.spigotmc.org/resources/"
-												+ resourceID);
-								p.sendMessage("");
-								p.sendMessage("§8=====§9Plugin by Seblii§8=====");
+								if (isUpdated) {
+									p.sendMessage("§8=====§fServerBackup§8=====");
+									p.sendMessage("");
+									p.sendMessage("§7There was a newer version available - §a" + latest
+											+ "§7, you are on - §c" + current);
+									p.sendMessage(
+											"\n§7The latest version has been downloaded automatically, please reload the server to complete the update.");
+									p.sendMessage("");
+									p.sendMessage("§8=====§9Plugin by Seblii§8=====");
+								} else {
+									if (getConfig().getBoolean("AutomaticUpdates")) {
+										if (p.hasPermission("backup.admin")) {
+											p.sendMessage("§8=====§fServerBackup§8=====");
+											p.sendMessage("");
+											p.sendMessage("§7There is a newer version available - §a" + latest
+													+ "§7, you are on - §c" + current);
+											p.sendMessage("");
+											p.sendMessage("§8=====§9Plugin by Seblii§8=====");
+											p.sendMessage("");
+											p.sendMessage("ServerBackup§7: Automatic update started...");
+
+											URL url = new URL(
+													"https://server-backup.net/assets/downloads/ServerBackup.jar");
+
+											int bVer = Integer.parseInt(
+													Bukkit.getVersion().split(" ")[Bukkit.getVersion().split(" ").length
+															- 1].replaceAll("\\)", "").replaceAll("\\.", ""));
+
+											if (bVer < 118) {
+												url = new URL(
+														"https://server-backup.net/assets/downloads/alt/ServerBackup.jar");
+											}
+
+											try (InputStream in = url.openStream();
+													ReadableByteChannel rbc = Channels.newChannel(in);
+													FileOutputStream fos = new FileOutputStream(
+															"plugins/ServerBackup.jar")) {
+												fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+
+												p.sendMessage(
+														"ServerBackup§7: Download finished. Please reload the server to complete the update.");
+
+												isUpdated = true;
+											}
+										}
+									} else {
+										p.sendMessage("§8=====§fServerBackup§8=====");
+										p.sendMessage("");
+										p.sendMessage("§7There is a newer version available - §a" + latest
+												+ "§7, you are on - §c" + current);
+										p.sendMessage(
+												"§7Please download the latest version - §4https://server-backup.net/");
+										p.sendMessage("");
+										p.sendMessage("§8=====§9Plugin by Seblii§8=====");
+									}
+								}
 							}
 						}
 					} catch (IOException exception) {

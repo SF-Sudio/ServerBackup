@@ -36,7 +36,6 @@ public class ZipManager {
 
 	public void zip() throws IOException {
 		Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
-
 			long sTime = System.nanoTime();
 
 			ServerBackup.getInstance().getLogger().log(Level.INFO, "");
@@ -55,35 +54,73 @@ public class ZipManager {
 			try (ZipOutputStream zs = new ZipOutputStream(Files.newOutputStream(p))) {
 				Path pp = Paths.get(sourceFilePath);
 				Files.walk(pp).filter(path -> !Files.isDirectory(path)).forEach(path -> {
-					ZipEntry zipEntry = new ZipEntry(pp.relativize(path).toString());
-					try {
-						if (sendDebugMsg) {
-							if (ServerBackup.getInstance().getConfig().getBoolean("SendLogMessages")) {
-								ServerBackup.getInstance().getLogger().log(Level.INFO, "Zipping '" + path.toString());
+					if (!path.toString().contains(ServerBackup.getInstance().getConfig().getString("BackupDestination")
+							.replaceAll("/", ""))) {
+						ZipEntry zipEntry = new ZipEntry(pp.relativize(path).toString());
 
-								if (Bukkit.getConsoleSender() != sender) {
-									sender.sendMessage("Zipping '" + path.toString());
+						for (String blacklist : ServerBackup.getInstance().getConfig().getStringList("Blacklist")) {
+							File bl = new File(blacklist);
+
+							if (bl.isDirectory()) {
+								if (path.toFile().getParent().toString().startsWith(bl.toString())
+										|| path.toFile().getParent().toString().startsWith(".\\" + bl.toString())) {
+									return;
+								}
+							} else {
+								if (path.equals(new File(blacklist).toPath())
+										|| path.equals(new File(".\\" + blacklist).toPath())) {
+									sender.sendMessage("Found '" + path.toString() + "' in blacklist. Skipping file.");
+									return;
 								}
 							}
 						}
 
-						zs.putNextEntry(zipEntry);
+						if (ServerBackup.getInstance().getConfig().getBoolean("DynamicBackup")) {
+							if (path.getParent().toString().endsWith("region")
+									|| path.getParent().toString().endsWith("entities")
+									|| path.getParent().toString().endsWith("poi")) {
+								boolean found = false;
+								if (ServerBackup.getInstance().bpInf
+										.contains("Data." + path.getParent().getParent().toString() + ".Chunk."
+												+ path.getFileName().toString())) {
+									found = true;
+								}
 
-						if (System.getProperty("os.name").startsWith("Windows")
-								&& path.toString().contains("session.lock")) {
-						} else {
-							try {
-								Files.copy(path, zs);
-							} catch (IOException e) {
-								e.printStackTrace();
+								if (!found)
+									return;
 							}
 						}
 
-						zs.closeEntry();
-					} catch (IOException e) {
-						e.printStackTrace();
-						ServerBackup.getInstance().getLogger().log(Level.WARNING, "Error while zipping files.");
-						return;
+						try {
+							if (sendDebugMsg) {
+								if (ServerBackup.getInstance().getConfig().getBoolean("SendLogMessages")) {
+									ServerBackup.getInstance().getLogger().log(Level.INFO,
+											"Zipping '" + path.toString() + "'");
+
+									if (Bukkit.getConsoleSender() != sender) {
+										sender.sendMessage("Zipping '" + path.toString());
+									}
+								}
+							}
+
+							zs.putNextEntry(zipEntry);
+
+							if (System.getProperty("os.name").startsWith("Windows")
+									&& path.toString().contains("session.lock")) {
+							} else {
+								try {
+									Files.copy(path, zs);
+								} catch (IOException e) {
+									e.printStackTrace();
+								}
+							}
+
+							zs.closeEntry();
+						} catch (IOException e) {
+							e.printStackTrace();
+							ServerBackup.getInstance().getLogger().log(Level.WARNING, "Error while zipping files.");
+							return;
+						}
 					}
 				});
 			} catch (IOException e) {
@@ -112,6 +149,19 @@ public class ZipManager {
 			sender.sendMessage("Backup [" + sourceFilePath + "] zipped.");
 			sender.sendMessage("Backup [" + sourceFilePath + "] saved.");
 
+			BackupManager.tasks.remove("CREATE {" + sourceFilePath.replace("\\", "/") + "}");
+
+			if (ServerBackup.getInstance().getConfig().getBoolean("DynamicBackup")) {
+				ServerBackup.getInstance().bpInf.set("Data." + sourceFilePath, null);
+
+				new File(targetFilePath).renameTo(new File(
+						targetFilePath.split("backup")[0] + "dynamic-backup" + targetFilePath.split("backup")[1]));
+				targetFilePath = targetFilePath.split("backup")[0] + "dynamic-backup"
+						+ targetFilePath.split("backup")[1];
+
+				ServerBackup.getInstance().saveBpInf();
+			}
+
 			if (ServerBackup.getInstance().getConfig().getBoolean("Ftp.UploadBackup")) {
 				FtpManager ftpm = new FtpManager(sender);
 				ftpm.uploadFileToFtp(targetFilePath);
@@ -123,6 +173,7 @@ public class ZipManager {
 				}
 			}
 		});
+
 	}
 
 	public void unzip() {
