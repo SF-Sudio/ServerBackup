@@ -1,6 +1,6 @@
 name: ServerBackup
 author: Seblii
-version: 2.7.1
+version: 2.8.1
 api-version: 1.18
 
 main: de.sebli.serverbackup.ServerBackup
@@ -13,3 +13,7 @@ commands:
 permissions:
   backup.admin:
     description: Permission for all backup commands
+  backup.notification:
+    description: Permission for receiving information about backups
+  backup.update:
+    description: Permission for receiving update messages
