@@ -183,10 +183,6 @@ public class ZipManager {
 				dm.uploadToDropbox(targetFilePath);
 			}
 
-			if(ServerBackup.getInstance().getConfig().getBoolean("CloudBackup.GoogleDrive")) {
-				GDriveManager.uploadBasic(targetFilePath);
-			}
-
 			for (Player all : Bukkit.getOnlinePlayers()) {
 				if (all.hasPermission("backup.notification")) {
 					all.sendMessage("Backup [" + sourceFilePath + "] saved.");
