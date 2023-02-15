@@ -2,7 +2,6 @@ package de.seblii.serverbackup;
 
 import de.seblii.serverbackup.utils.DropboxManager;
 import de.seblii.serverbackup.utils.FtpManager;
-import de.seblii.serverbackup.utils.GDriveManager;
 import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
