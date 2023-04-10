@@ -354,7 +354,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 	public void startTimer() {
 		if (getConfig().getBoolean("AutomaticBackups")) {
-			Bukkit.getScheduler().runTaskTimerAsynchronously(this, new BackupTimer(), 20 * 60, 20 * 60);
+			Bukkit.getScheduler().runTaskTimerAsynchronously(this, new BackupTimer(), 20 * 20, 20 * 20);
 		}
 	}
 
