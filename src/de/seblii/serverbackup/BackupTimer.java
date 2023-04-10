@@ -15,39 +15,47 @@ public class BackupTimer implements Runnable {
 
 	Calendar cal = Calendar.getInstance();
 
+	int checkMinute = 0;
+
 	@Override
 	public void run() {
 		cal = Calendar.getInstance();
 
-		boolean isBackupDay = days.stream().filter(d -> d.equalsIgnoreCase(getDayName(cal.get(Calendar.DAY_OF_WEEK))))
-				.findFirst().isPresent();
+		int timeCode = cal.get(Calendar.HOUR_OF_DAY) * 100 + cal.get(Calendar.MINUTE);
 
-		if (isBackupDay) {
-			for (String time : times) {
-				try {
-					String[] timeStr = time.split("-");
+		if(checkMinute != timeCode) {
+			checkMinute = timeCode;
 
-					if (timeStr[0].startsWith("0")) {
-						timeStr[0] = timeStr[0].substring(1);
-					}
+			boolean isBackupDay = days.stream().filter(d -> d.equalsIgnoreCase(getDayName(cal.get(Calendar.DAY_OF_WEEK))))
+					.findFirst().isPresent();
 
-					if (timeStr[1].startsWith("0")) {
-						timeStr[1] = timeStr[1].substring(1);
-					}
+			if (isBackupDay) {
+				for (String time : times) {
+					try {
+						String[] timeStr = time.split("-");
 
-					int hour = Integer.valueOf(timeStr[0]);
-					int minute = Integer.valueOf(timeStr[1]);
-
-					if (cal.get(Calendar.HOUR_OF_DAY) == hour && cal.get(Calendar.MINUTE) == minute) {
-						for (String world : worlds) {
-							BackupManager bm = new BackupManager(world, Bukkit.getConsoleSender(),
-									!ServerBackup.getInstance().getConfig().getBoolean("DynamicBackup"));
-							bm.createBackup();
+						if (timeStr[0].startsWith("0")) {
+							timeStr[0] = timeStr[0].substring(1);
 						}
+
+						if (timeStr[1].startsWith("0")) {
+							timeStr[1] = timeStr[1].substring(1);
+						}
+
+						int hour = Integer.valueOf(timeStr[0]);
+						int minute = Integer.valueOf(timeStr[1]);
+
+						if (cal.get(Calendar.HOUR_OF_DAY) == hour && cal.get(Calendar.MINUTE) == minute) {
+							for (String world : worlds) {
+								BackupManager bm = new BackupManager(world, Bukkit.getConsoleSender(),
+										!ServerBackup.getInstance().getConfig().getBoolean("DynamicBackup"));
+								bm.createBackup();
+							}
+						}
+					} catch (Exception e) {
+						ServerBackup.getInstance().getLogger().log(Level.WARNING,
+								"ServerBackup: Automatic Backup failed. Please check that you set the BackupTimer correctly.");
 					}
-				} catch (Exception e) {
-					ServerBackup.getInstance().getLogger().log(Level.WARNING,
-							"ServerBackup: Automatic Backup failed. Please check that you set the BackupTimer correctly.");
 				}
 			}
 		}
