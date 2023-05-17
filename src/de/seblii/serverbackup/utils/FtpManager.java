@@ -73,12 +73,6 @@ public class FtpManager {
 
 				ftpC.setControlKeepAliveTimeout(100);
 
-				if(direct) {
-					directUpload(ftpC, filePath, new File(filePath));
-
-					return;
-				}
-
 				InputStream inputStream = new FileInputStream(file);
 
 				boolean done = ftpC.storeFile(file.getName(), inputStream);
@@ -135,12 +129,6 @@ public class FtpManager {
 
 					ftpClient.setControlKeepAliveTimeout(100);
 
-					if(direct) {
-						directUpload(ftpC, filePath, new File(filePath));
-
-						return;
-					}
-
 					InputStream inputStream = new FileInputStream(file);
 
 					boolean done = ftpClient.storeFile(file.getName(), inputStream);
@@ -192,47 +180,6 @@ public class FtpManager {
 				e.printStackTrace();
 			}
 		}
-	}
-
-	private void directUpload(FTPClient ftpc, String filePath, File file) {
-		Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), new Runnable() {
-			@Override
-			public void run() {
-				File[] subFiles = file.listFiles();
-				if(subFiles != null && subFiles.length > 0){
-					for(File item : subFiles) {
-						String targetFilePath = filePath + "/" + item.getName();
-
-						if(item.isFile()) {
-							uploadFileToFtp(item.getPath(), false);
-						} else {
-							try {
-								ftpc.connect(server, port);
-								ftpc.login(user, pass);
-								ftpc.enterLocalPassiveMode();
-
-								ftpc.setFileType(FTP.BINARY_FILE_TYPE);
-								ftpc.setFileTransferMode(FTP.BINARY_FILE_TYPE);
-
-								ftpc.changeWorkingDirectory(
-										ServerBackup.getInstance().getConfig().getString("Ftp.Server.BackupDirectory"));
-
-								boolean created = ftpc.makeDirectory(targetFilePath);
-							} catch (IOException e) {
-								throw new RuntimeException(e);
-							}
-
-							String parent = targetFilePath + "/" + item.getName();
-							if(targetFilePath.equals("")) {
-								parent = item.getName();
-							}
-
-							directUpload(ftpc, parent, new File(targetFilePath));
-						}
-					}
-				}
-			}
-		});
 	}
 
 	public void downloadFileFromFtp(String filePath) {
