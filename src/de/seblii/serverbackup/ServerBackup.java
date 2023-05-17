@@ -229,7 +229,6 @@ public class ServerBackup extends JavaPlugin implements Listener {
 						+ "\nBlacklist - A list of files/directories that will not be backed up."
 						+ "\nIMPORTANT FTP information: Set 'UploadBackup' to 'true' if you want to store your backups on a ftp server (sftp does not work at the moment - if you host your own server (e.g. vps/root server) you need to set up a ftp server on it)."
 						+ "\nIf you use ftp backups, you can set 'DeleteLocalBackup' to 'true' if you want the plugin to remove the created backup from your server once it has been uploaded to your ftp server."
-						+ "\nCompressBeforeUpload compresses the backup to a zip file before uploading it. Set it to 'false' if you want the files to be uploaded directly to your ftp server."
 						+ "\nJoin the discord server if you need help or have a question: https://discord.gg/rNzngsCWFC");
 		getConfig().options().copyDefaults(true);
 
@@ -280,7 +279,6 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 		getConfig().addDefault("Ftp.UploadBackup", false);
 		getConfig().addDefault("Ftp.DeleteLocalBackup", false);
-		getConfig().addDefault("Ftp.CompressBeforeUpload", true);
 		getConfig().addDefault("Ftp.Server.IP", "127.0.0.1");
 		getConfig().addDefault("Ftp.Server.Port", 21);
 		getConfig().addDefault("Ftp.Server.User", "username");
