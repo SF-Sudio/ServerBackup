@@ -28,6 +28,8 @@ public class ZipManager {
 	private boolean isSaving;
 	private boolean fullBackup;
 
+	private ServerBackup backup = ServerBackup.getInstance();
+
 	public ZipManager(String sourceFilePath, String targetFilePath, CommandSender sender, boolean sendDebugMsg,
 			boolean isSaving, boolean fullBackup) {
 		this.sourceFilePath = sourceFilePath;
@@ -151,9 +153,7 @@ public class ZipManager {
 				}
 			}
 
-			sender.sendMessage("");
-			sender.sendMessage("Backup [" + sourceFilePath + "] zipped.");
-			sender.sendMessage("Backup [" + sourceFilePath + "] saved.");
+			sender.sendMessage(backup.processMessage("Command.Zip.Footer").replaceAll("%file%", sourceFilePath));
 
 			BackupManager.tasks.remove("CREATE {" + sourceFilePath.replace("\\", "/") + "}");
 
@@ -174,7 +174,7 @@ public class ZipManager {
 
 			if (ServerBackup.getInstance().getConfig().getBoolean("Ftp.UploadBackup")) {
 				FtpManager ftpm = new FtpManager(sender);
-				ftpm.uploadFileToFtp(targetFilePath);
+				ftpm.uploadFileToFtp(targetFilePath, false);
 			}
 
 			if(ServerBackup.getInstance().getConfig().getBoolean("CloudBackup.Dropbox")) {
@@ -182,9 +182,14 @@ public class ZipManager {
 				dm.uploadToDropbox(targetFilePath);
 			}
 
+			// CHANGE
+			/*if(ServerBackup.getInstance().getConfig().getBoolean("CloudBackup.GoogleDrive")) {
+				GDriveManager.uploadBasic(targetFilePath);
+			}*/
+
 			for (Player all : Bukkit.getOnlinePlayers()) {
 				if (all.hasPermission("backup.notification")) {
-					all.sendMessage("Backup [" + sourceFilePath + "] saved.");
+					all.sendMessage(backup.processMessage("Info.BackupFinished").replaceAll("%file%", sourceFilePath));
 				}
 			}
 		});
@@ -249,8 +254,7 @@ public class ZipManager {
 
 			file.delete();
 
-			sender.sendMessage("");
-			sender.sendMessage("Backup [" + sourceFilePath + "] unzipped.");
+			sender.sendMessage(backup.processMessage("Command.Unzip.Footer").replaceAll("%file%", sourceFilePath));
 		});
 	}
 

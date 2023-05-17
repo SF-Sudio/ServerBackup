@@ -46,9 +46,14 @@ public class ServerBackup extends JavaPlugin implements Listener {
 	public File cloudInfo = new File("plugins//ServerBackup//cloudAccess.yml");
 	public YamlConfiguration cloud = YamlConfiguration.loadConfiguration(cloudInfo);
 
+	public File messagesFile = new File("plugins//ServerBackup//messages.yml");
+	public YamlConfiguration messages = YamlConfiguration.loadConfiguration(messagesFile);
+
 	boolean isUpdated = false;
 
 	public boolean shutdownProgress = false;
+
+	public String prefix = "";
 
 	@Override
 	public void onDisable() {
@@ -72,7 +77,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 		getCommand("backup").setExecutor(new SBCommand());
 
-		Bukkit.getPluginManager().registerEvents(this, this);
+		Bukkit.getPluginManager().registerEvents(this, this); //CHANGE
 		Bukkit.getPluginManager().registerEvents(new DynamicBackup(), this);
 
 		startTimer();
@@ -80,10 +85,10 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		this.getLogger().log(Level.INFO, "ServerBackup: Plugin enabled.");
 
 		if (getConfig().getBoolean("UpdateAvailableMessage")) {
-			checkVersion();
+			checkVersion(); //CHANGE
 		}
 
-		int mpid = 14673;
+		int mpid = 14673; //17639 //CHANGE
 
 		Metrics metrics = new Metrics(this, mpid);
 
@@ -224,6 +229,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 						+ "\nBlacklist - A list of files/directories that will not be backed up."
 						+ "\nIMPORTANT FTP information: Set 'UploadBackup' to 'true' if you want to store your backups on a ftp server (sftp does not work at the moment - if you host your own server (e.g. vps/root server) you need to set up a ftp server on it)."
 						+ "\nIf you use ftp backups, you can set 'DeleteLocalBackup' to 'true' if you want the plugin to remove the created backup from your server once it has been uploaded to your ftp server."
+						+ "\nCompressBeforeUpload compresses the backup to a zip file before uploading it. Set it to 'false' if you want the files to be uploaded directly to your ftp server."
 						+ "\nJoin the discord server if you need help or have a question: https://discord.gg/rNzngsCWFC");
 		getConfig().options().copyDefaults(true);
 
@@ -268,11 +274,13 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		getConfig().addDefault("BackupDestination", "Backups//");
 
 		getConfig().addDefault("CloudBackup.Dropbox", false);
+		//getConfig().addDefault("CloudBackup.GoogleDrive", true); //CHANGE
 		getConfig().addDefault("CloudBackup.Options.Destination", "/");
 		getConfig().addDefault("CloudBackup.Options.DeleteLocalBackup", false);
 
 		getConfig().addDefault("Ftp.UploadBackup", false);
 		getConfig().addDefault("Ftp.DeleteLocalBackup", false);
+		getConfig().addDefault("Ftp.CompressBeforeUpload", true);
 		getConfig().addDefault("Ftp.Server.IP", "127.0.0.1");
 		getConfig().addDefault("Ftp.Server.Port", 21);
 		getConfig().addDefault("Ftp.Server.User", "username");
@@ -293,6 +301,8 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		if (getConfig().getBoolean("CloudBackup.Dropbox")) {
 			loadCloud();
 		}
+
+		loadMessages();
 	}
 
 	public void loadCloud() {
@@ -304,10 +314,8 @@ public class ServerBackup extends JavaPlugin implements Listener {
 			}
 		}
 
-		List<String> header = new ArrayList<>();
-		header.add("Dropbox - Watch this video for explanation: https://youtu.be/k-0aIohxRUA");
-
-		cloud.options().setHeader(header);
+		cloud.options().header("Dropbox - Watch this video for explanation: https://youtu.be/k-0aIohxRUA"
+				/*+"Google Drive - Watch this video for explanation: x"*/);
 
 		if(!cloud.contains("Cloud.Dropbox")) {
 			cloud.set("Cloud.Dropbox.AppKey", "appKey");
@@ -350,6 +358,83 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public void loadMessages() {
+		if (!messagesFile.exists()) {
+			try {
+				messagesFile.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+		messages.options().header("Use '&nl' to add a new line. Use '&' for color codes (e.g. '&4' for color red). For some messages you can use a placeholder (e.g. '%file%' for file name)." +
+				"\nMinecraft color codes: https://htmlcolorcodes.com/minecraft-color-codes/");
+		messages.options().copyDefaults(true);
+
+		messages.addDefault("Prefix", "");
+
+		messages.addDefault("Command.Zip.Header", "Zipping Backup..."
+				+ "&nl");
+		messages.addDefault("Command.Zip.Footer", "&nl"
+				+ "&nlBackup [%file%] zipped."
+				+ "&nlBackup [%file%] saved.");
+		messages.addDefault("Command.Unzip.Header", "Unzipping Backup..."
+				+ "&nl");
+		messages.addDefault("Command.Unzip.Footer", "&nl"
+				+ "&nlBackup [%file%] unzipped.");
+		messages.addDefault("Command.Reload", "Config reloaded.");
+		messages.addDefault("Command.Tasks.Header", "----- Backup tasks -----"
+				+ "&nl");
+		messages.addDefault("Command.Tasks.Footer", "&nl"
+				+ "----- Backup tasks -----");
+		messages.addDefault("Command.Shutdown.Start", "The server will shut down after backup tasks (check with: '/backup tasks') are finished."
+				+ "&nlYou can cancel the shutdown by running this command again.");
+		messages.addDefault("Command.Shutdown.Cancel", "Shutdown canceled.");
+
+		messages.addDefault("Info.BackupFinished", "Backup [%file%] saved.");
+		messages.addDefault("Info.BackupStarted", "Backup [%file%] started.");
+		messages.addDefault("Info.BackupRemoved", "Backup [%file%] removed.");
+		messages.addDefault("Info.FtpUpload", "Ftp: Uploading backup [%file%] ...");
+		messages.addDefault("Info.FtpUploadSuccess", "Ftp: Upload successfully. Backup stored on ftp server.");
+		messages.addDefault("Info.FtpDownload", "Ftp: Downloading backup [%file%] ...");
+		messages.addDefault("Info.FtpDownloadSuccess", "Ftp: Download successful. Backup downloaded from ftp server.");
+
+		messages.addDefault("Error.NoPermission", "&cI'm sorry but you do not have permission to perform this command.");
+		messages.addDefault("Error.NoBackups", "No backups found.");
+		messages.addDefault("Error.NoBackupFound", "No Backup named '%file%' found.");
+		messages.addDefault("Error.NoBackupSearch", "No backups for search argument '%input%' found.");
+		messages.addDefault("Error.DeletionFailed", "Error while deleting '%file%'.");
+		messages.addDefault("Error.FolderExists", "There is already a folder named '%file%'.");
+		messages.addDefault("Error.ZipExists", "There is already a ZIP file named '%file%.zip'.");
+		messages.addDefault("Error.NoFtpBackups", "No ftp backups found.");
+		messages.addDefault("Error.NoTasks", "No backup tasks are running.");
+		messages.addDefault("Error.AlreadyZip", "%file% is already a ZIP file.");
+		messages.addDefault("Error.NotAZip", "%file% is not a ZIP file.");
+		messages.addDefault("Error.NotANumber", "%input% is not a valid number.");
+		messages.addDefault("Error.BackupFailed", "An error occurred while saving Backup [%file%]. See console for more information.");
+		messages.addDefault("Error.FtpUploadFailed", "Ftp: Error while uploading backup to ftp server. Check server details in config.yml (ip, port, user, password).");
+		messages.addDefault("Error.FtpDownloadFailed", "Ftp: Error while downloading backup to ftp server. Check server details in config.yml (ip, port, user, password).");
+		messages.addDefault("Error.FtpLocalDeletionFailed", "Ftp: Local backup deletion failed because the uploaded file was not found on the ftp server. Try again.");
+		messages.addDefault("Error.FtpNotFound", "Ftp: ftp-backup %file% not found.");
+		messages.addDefault("Error.FtpConnectionFailed", "Ftp: Error while connecting to FTP server.");
+
+		saveMessages();
+
+		prefix = ((messages.getString("Prefix").equals("")) ? messages.getString("Prefix") : (messages.getString("Prefix") + " "));
+	}
+
+	public void saveMessages() {
+		try {
+			messages.save(messagesFile);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public String processMessage(String msgCode) {
+		return (prefix + messages.getString(msgCode)).replace("&nl", "\n").replace("&", "§");
 	}
 
 	public void startTimer() {

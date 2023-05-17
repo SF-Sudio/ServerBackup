@@ -29,7 +29,9 @@ public class FtpManager {
 
 	boolean isSSL = true;
 
-	public void uploadFileToFtp(String filePath) {
+	ServerBackup backup = ServerBackup.getInstance();
+
+	public void uploadFileToFtp(String filePath, boolean direct) {
 		File file = new File(filePath);
 
 		if (!file.getPath().contains(ServerBackup.getInstance().backupDestination.replaceAll("/", ""))) {
@@ -38,7 +40,7 @@ public class FtpManager {
 		}
 
 		if (!file.exists()) {
-			sender.sendMessage("Ftp: Backup '" + file.getName() + "' not found.");
+			sender.sendMessage(backup.processMessage("Error.NoBackupFound").replaceAll("%file%", file.getName()));
 
 			return;
 		}
@@ -67,11 +69,17 @@ public class FtpManager {
 				ftpC.changeWorkingDirectory(
 						ServerBackup.getInstance().getConfig().getString("Ftp.Server.BackupDirectory"));
 
-				sender.sendMessage("Ftp: Uploading backup [" + file.getName() + "] ...");
-
-				InputStream inputStream = new FileInputStream(file);
+				sender.sendMessage(backup.processMessage("Info.FtpUpload").replaceAll("%file%", file.getName()));
 
 				ftpC.setControlKeepAliveTimeout(100);
+
+				if(direct) {
+					directUpload(ftpC, filePath, new File(filePath));
+
+					return;
+				}
+
+				InputStream inputStream = new FileInputStream(file);
 
 				boolean done = ftpC.storeFile(file.getName(), inputStream);
 
@@ -83,7 +91,7 @@ public class FtpManager {
 				inputStream.close();
 
 				if (done) {
-					sender.sendMessage("Ftp: Upload successfully. Backup stored on ftp server.");
+					sender.sendMessage(backup.processMessage("Info.FtpUploadSuccess"));
 
 					if (ServerBackup.getInstance().getConfig().getBoolean("Ftp.DeleteLocalBackup")) {
 						boolean exists = false;
@@ -95,13 +103,11 @@ public class FtpManager {
 						if (exists) {
 							file.delete();
 						} else {
-							sender.sendMessage(
-									"Ftp: Local backup deletion failed because the uploaded file was not found on the ftp server. Try again.");
+							sender.sendMessage(backup.processMessage("Error.FtpLocalDeletionFailed"));
 						}
 					}
 				} else {
-					sender.sendMessage(
-							"Ftp: Error while uploading backup to ftp server. Check server details in config.yml (ip, port, user, password).");
+					sender.sendMessage(backup.processMessage("Error.FtpUploadFailed"));
 				}
 			} else {
 				try {
@@ -127,9 +133,15 @@ public class FtpManager {
 					ftpClient.changeWorkingDirectory(
 							ServerBackup.getInstance().getConfig().getString("Ftp.Server.BackupDirectory"));
 
-					InputStream inputStream = new FileInputStream(file);
-
 					ftpClient.setControlKeepAliveTimeout(100);
+
+					if(direct) {
+						directUpload(ftpC, filePath, new File(filePath));
+
+						return;
+					}
+
+					InputStream inputStream = new FileInputStream(file);
 
 					boolean done = ftpClient.storeFile(file.getName(), inputStream);
 
@@ -141,7 +153,7 @@ public class FtpManager {
 					inputStream.close();
 
 					if (done) {
-						sender.sendMessage("Ftp: Upload successfull. Backup stored on ftp server.");
+						sender.sendMessage(backup.processMessage("Info.FtpUploadSuccess"));
 
 						if (ServerBackup.getInstance().getConfig().getBoolean("Ftp.DeleteLocalBackup")) {
 							boolean exists = false;
@@ -153,21 +165,19 @@ public class FtpManager {
 							if (exists) {
 								file.delete();
 							} else {
-								sender.sendMessage(
-										"Ftp: Local backup deletion failed because the uploaded file was not found on the ftp server. Try again.");
+								sender.sendMessage(backup.processMessage("Error.FtpLocalDeletionFailed"));
 							}
 						}
 					} else {
-						sender.sendMessage(
-								"Ftp: Error while uploading backup to ftp server. Check server details in config.yml (ip, port, user, password).");
+						sender.sendMessage(backup.processMessage("Error.FtpUploadFailed"));
 					}
 				} catch (Exception e) {
 					isSSL = false;
-					uploadFileToFtp(filePath);
+					uploadFileToFtp(filePath, direct);
 				}
 			}
 		} catch (IOException e) {
-			sender.sendMessage("Ftp: Error while uploading backup to ftp server.");
+			sender.sendMessage(backup.processMessage("Error.FtpUploadFailed"));
 			e.printStackTrace();
 		} finally {
 			try {
@@ -182,6 +192,47 @@ public class FtpManager {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	private void directUpload(FTPClient ftpc, String filePath, File file) {
+		Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), new Runnable() {
+			@Override
+			public void run() {
+				File[] subFiles = file.listFiles();
+				if(subFiles != null && subFiles.length > 0){
+					for(File item : subFiles) {
+						String targetFilePath = filePath + "/" + item.getName();
+
+						if(item.isFile()) {
+							uploadFileToFtp(item.getPath(), false);
+						} else {
+							try {
+								ftpc.connect(server, port);
+								ftpc.login(user, pass);
+								ftpc.enterLocalPassiveMode();
+
+								ftpc.setFileType(FTP.BINARY_FILE_TYPE);
+								ftpc.setFileTransferMode(FTP.BINARY_FILE_TYPE);
+
+								ftpc.changeWorkingDirectory(
+										ServerBackup.getInstance().getConfig().getString("Ftp.Server.BackupDirectory"));
+
+								boolean created = ftpc.makeDirectory(targetFilePath);
+							} catch (IOException e) {
+								throw new RuntimeException(e);
+							}
+
+							String parent = targetFilePath + "/" + item.getName();
+							if(targetFilePath.equals("")) {
+								parent = item.getName();
+							}
+
+							directUpload(ftpc, parent, new File(targetFilePath));
+						}
+					}
+				}
+			}
+		});
 	}
 
 	public void downloadFileFromFtp(String filePath) {
@@ -208,12 +259,12 @@ public class FtpManager {
 				}
 
 				if (!exists) {
-					sender.sendMessage("Ftp: ftp-backup '" + file.getName() + "' not found.");
+					sender.sendMessage(backup.processMessage("Error.FtpNotFound").replaceAll("%file%", file.getName()));
 
 					return;
 				}
 
-				sender.sendMessage("Ftp: Downloading backup [" + file.getName() + "] ...");
+				sender.sendMessage(backup.processMessage("Info.FtpDownload").replaceAll("%file%", file.getName()));
 
 				OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(file));
 				boolean success = ftpC.retrieveFile(file.getName(), outputStream);
@@ -234,10 +285,9 @@ public class FtpManager {
 				});
 
 				if (success) {
-					sender.sendMessage("Ftp: Download successfull. Backup downloaded from ftp server.");
+					sender.sendMessage(backup.processMessage("Info.FtpDownloadSuccess"));
 				} else {
-					sender.sendMessage(
-							"Ftp: Error while downloading backup from ftp server. Check server details in config.yml (ip, port, user, password).");
+					sender.sendMessage(backup.processMessage("Error.FtpDownloadFailed"));
 				}
 			} else {
 				try {
@@ -260,12 +310,12 @@ public class FtpManager {
 					}
 
 					if (!exists) {
-						sender.sendMessage("Ftp: ftp-backup '" + file.getName() + "' not found.");
+						sender.sendMessage(backup.processMessage("Error.FtpNotFound").replaceAll("%file%", file.getName()));
 
 						return;
 					}
 
-					sender.sendMessage("Ftp: Downloading backup [" + file.getName() + "] ...");
+					sender.sendMessage(backup.processMessage("Info.FtpDownload").replaceAll("%file%", file.getName()));
 
 					OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(file));
 					boolean success = ftpClient.retrieveFile(file.getName(), outputStream);
@@ -286,10 +336,9 @@ public class FtpManager {
 					});
 
 					if (success) {
-						sender.sendMessage("Ftp: Download successfull. Backup downloaded from ftp server.");
+						sender.sendMessage(backup.processMessage("Info.FtpDownloadSuccess"));
 					} else {
-						sender.sendMessage(
-								"Ftp: Error while downloading backup from ftp server. Check server details in config.yml (ip, port, user, password).");
+						sender.sendMessage(backup.processMessage("Error.FtpDownloadFailed"));
 					}
 				} catch (Exception e) {
 					isSSL = false;
@@ -297,7 +346,7 @@ public class FtpManager {
 				}
 			}
 		} catch (IOException e) {
-			sender.sendMessage("Ftp: Error while downloading backup from ftp server.");
+			sender.sendMessage(backup.processMessage("Error.FtpDownloadFailed"));
 			e.printStackTrace();
 		} finally {
 			try {
@@ -369,7 +418,7 @@ public class FtpManager {
 			}
 
 		} catch (IOException e) {
-			sender.sendMessage("Error while connecting to FTP server.");
+			sender.sendMessage(backup.processMessage("Error.FtpConnectionFailed"));
 			e.printStackTrace();
 		} finally {
 			try {

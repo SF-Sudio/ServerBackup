@@ -31,22 +31,22 @@ import java.util.logging.Level;
 
 public class SBCommand implements CommandExecutor, TabCompleter {
 
+	private ServerBackup backup = ServerBackup.getInstance();
+
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 
 		if (sender.hasPermission("backup.admin")) {
 			if (args.length == 1) {
 				if (args[0].equalsIgnoreCase("shutdown")) {
-					if (ServerBackup.getInstance().shutdownProgress) {
-						ServerBackup.getInstance().shutdownProgress = false;
+					if (backup.shutdownProgress) {
+						backup.shutdownProgress = false;
 
-						sender.sendMessage("Shutdown canceled.");
+						sender.sendMessage(backup.processMessage("Command.Shutdown.Cancel"));
 					} else {
 						ServerBackup.getInstance().shutdownProgress = true;
 
-						sender.sendMessage(
-								"The server will shut down after backup tasks (check with: '/backup tasks') are finished.");
-						sender.sendMessage("You can cancel the shutdown by running this command again.");
+						sender.sendMessage(backup.processMessage("Command.Shutdown.Start"));
 					}
 				} else if (args[0].equalsIgnoreCase("list")) {
 					Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
@@ -54,7 +54,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 
 						if (backups.length == 0
 								|| backups.length == 1 && backups[0].getName().equalsIgnoreCase("Files")) {
-							sender.sendMessage("No backups found.");
+							sender.sendMessage(backup.processMessage("Error.NoBackups"));
 
 							return;
 						}
@@ -127,20 +127,18 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 
 					ServerBackup.getInstance().loadFiles();
 
-					sender.sendMessage("Config reloaded.");
+					sender.sendMessage(backup.processMessage("Command.Reload"));
 				} else if (args[0].equalsIgnoreCase("tasks") || args[0].equalsIgnoreCase("task")) {
 					if (BackupManager.tasks.size() > 0) {
-						sender.sendMessage("----- Backup tasks -----");
-						sender.sendMessage("");
+						sender.sendMessage(backup.processMessage("Command.Tasks.Header"));
 
 						for (String task : BackupManager.tasks) {
 							sender.sendMessage(task);
 						}
 
-						sender.sendMessage("");
-						sender.sendMessage("----- Backup tasks -----");
+						sender.sendMessage(backup.processMessage("Command.Tasks.Footer"));
 					} else {
-						sender.sendMessage("No backup tasks are running.");
+						sender.sendMessage(backup.processMessage("Error.NoTasks"));
 					}
 				} else {
 					sendHelp(sender);
@@ -154,7 +152,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 
 						if (backups.length == 0
 								|| backups.length == 1 && backups[0].getName().equalsIgnoreCase("Files")) {
-							sender.sendMessage("No backups found.");
+							sender.sendMessage(backup.processMessage("Error.NoBackups"));
 
 							return;
 						}
@@ -213,7 +211,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 							sender.sendMessage("");
 							sender.sendMessage("-------- Page " + page + "/" + maxPages + " --------");
 						} catch (Exception e) {
-							sender.sendMessage("'" + args[1] + "' is not a valid number.");
+							sender.sendMessage(backup.processMessage("Error.NotANumber").replaceAll("%input%", args[1]));
 						}
 					});
 				} else if (args[0].equalsIgnoreCase("ftp")) {
@@ -224,7 +222,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 							List<String> backups = ftpm.getFtpBackupList();
 
 							if (backups.size() == 0) {
-								sender.sendMessage("No ftp backups found.");
+								sender.sendMessage(backup.processMessage("Error.NoFtpBackups"));
 
 								return;
 							}
@@ -266,7 +264,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 					String filePath = args[1];
 
 					if (args[1].contains(".zip")) {
-						sender.sendMessage("'" + args[1] + "' is already a ZIP file.");
+						sender.sendMessage(backup.processMessage("Error.AlreadyZip").replaceAll("%file%", args[1]));
 						return false;
 					}
 
@@ -274,8 +272,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 					File newFile = new File(ServerBackup.getInstance().backupDestination + "//" + filePath + ".zip");
 
 					if (!newFile.exists()) {
-						sender.sendMessage("Zipping Backup...");
-						sender.sendMessage("");
+						sender.sendMessage(backup.processMessage("Command.Zip.Header"));
 
 						if (file.exists()) {
 							try {
@@ -287,16 +284,16 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 								e.printStackTrace();
 							}
 						} else {
-							sender.sendMessage("No Backup named '" + args[1] + "' found.");
+							sender.sendMessage(backup.processMessage("Error.NoBackupFound").replaceAll("%file%", args[1]));
 						}
 					} else {
-						sender.sendMessage("There is already a folder named '" + args[1].replaceAll(".zip", "") + "'");
+						sender.sendMessage(backup.processMessage("Error.FolderExists").replaceAll("%file%", args[1]));
 					}
 				} else if (args[0].equalsIgnoreCase("unzip")) {
 					String filePath = args[1];
 
 					if (!args[1].contains(".zip")) {
-						sender.sendMessage("'" + args[1] + "' is not a ZIP file.");
+						sender.sendMessage(backup.processMessage("Error.NotAZip").replaceAll("%file%", args[1]));
 						return false;
 					}
 
@@ -305,8 +302,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 							ServerBackup.getInstance().backupDestination + "//" + filePath.replaceAll(".zip", ""));
 
 					if (!newFile.exists()) {
-						sender.sendMessage("Unzipping Backup...");
-						sender.sendMessage("");
+						sender.sendMessage(backup.processMessage("Command.Unzip.Header"));
 
 						if (file.exists()) {
 							ZipManager zm = new ZipManager(file.getPath(),
@@ -315,10 +311,10 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 
 							zm.unzip();
 						} else {
-							sender.sendMessage("No Backup named '" + args[1] + "' found.");
+							sender.sendMessage(backup.processMessage("Error.NoBackupFound").replaceAll("%file%", args[1]));
 						}
 					} else {
-						sender.sendMessage("There is already a ZIP file named '" + args[1] + ".zip'");
+						sender.sendMessage(backup.processMessage("Error.ZipExists").replaceAll("%file%", args[1]));
 					}
 				} else if (args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("remove")) {
 					if (args[1].equalsIgnoreCase("Files")) {
@@ -335,7 +331,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 						File[] backups = new File(ServerBackup.getInstance().backupDestination + "").listFiles();
 
 						if (backups.length == 0) {
-							sender.sendMessage("No backups found.");
+							sender.sendMessage(backup.processMessage("Error.NoBackups"));
 
 							return;
 						}
@@ -349,7 +345,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 						}
 
 						if (backupsMatch.size() == 0) {
-							sender.sendMessage("No backups for search argument '" + args[1] + "' found.");
+							sender.sendMessage(backup.processMessage("NoBackupSearch").replaceAll("%input%", args[1]));
 
 							return;
 						}
@@ -409,7 +405,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 
 							if (backups.length == 0
 									|| backups.length == 1 && backups[0].getName().equalsIgnoreCase("Files")) {
-								sender.sendMessage("No backups found.");
+								sender.sendMessage(backup.processMessage("Error.NoBackups"));
 
 								return;
 							}
@@ -423,7 +419,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 							}
 
 							if (backupsMatch.size() == 0) {
-								sender.sendMessage("No backups for search argument '" + args[1] + "' found.");
+								sender.sendMessage(backup.processMessage("NoBackupSearch").replaceAll("%input%", args[1]));
 
 								return;
 							}
@@ -482,7 +478,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 								sender.sendMessage("");
 								sender.sendMessage("-------- Page " + page + "/" + maxPages + " --------");
 							} catch (Exception e) {
-								sender.sendMessage("'" + args[2] + "' is not a valid number.");
+								sender.sendMessage(backup.processMessage("Error.NotANumber").replaceAll("%input%", args[2]));
 							}
 						});
 					} else if (args[0].equalsIgnoreCase("ftp")) {
@@ -493,7 +489,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 								List<String> backups = ftpm.getFtpBackupList();
 
 								if (backups.size() == 0) {
-									sender.sendMessage("No ftp backups found.");
+									sender.sendMessage(backup.processMessage("Error.NoFtpBackups"));
 
 									return;
 								}
@@ -541,7 +537,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 									sender.sendMessage("");
 									sender.sendMessage("--------- Page " + page + "/" + maxPages + " ---------");
 								} catch (Exception e) {
-									sender.sendMessage("'" + args[1] + "' is not a valid number.");
+									sender.sendMessage(backup.processMessage("Error.NotANumber").replaceAll("%input%", args[1]));
 								}
 							});
 						} else if (args[1].equalsIgnoreCase("download")) {
@@ -554,7 +550,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 							Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
 								FtpManager ftpm = new FtpManager(sender);
 
-								ftpm.uploadFileToFtp(args[2]);
+								ftpm.uploadFileToFtp(args[2], false);
 							});
 						}
 					} else if(args[0].equalsIgnoreCase("dropbox")) {
@@ -602,10 +598,9 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 
 									Files.copy(file, des);
 
-									sender.sendMessage("Backup [" + file.getName() + "] saved.");
+									sender.sendMessage(backup.processMessage("Info.BackupFinished").replaceAll("%file%", file.getName()));
 								} catch (IOException e) {
-									sender.sendMessage("An error occured while saving Backup [" + file.getName()
-											+ "]. See console for more information.");
+									sender.sendMessage(backup.processMessage("Error.BackupFailed").replaceAll("%file%", file.getName()));
 									e.printStackTrace();
 								}
 							}
@@ -621,7 +616,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 				sendHelp(sender);
 			}
 		} else {
-			sender.sendMessage("§cI'm sorry but you do not have permission to perform this command.");
+			sender.sendMessage(backup.processMessage("Error.NoPermission"));
 		}
 
 		return false;

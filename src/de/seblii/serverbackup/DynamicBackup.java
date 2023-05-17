@@ -9,12 +9,13 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 
 public class DynamicBackup implements Listener {
 
-	List<Chunk> chunks = new ArrayList<>();
+	List<Chunk> chunks = Collections.synchronizedList(new ArrayList<>());
 	public boolean isSaving = false;
 
 	@EventHandler

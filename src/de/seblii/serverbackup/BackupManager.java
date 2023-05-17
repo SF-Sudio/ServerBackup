@@ -1,5 +1,6 @@
 package de.seblii.serverbackup;
 
+import de.seblii.serverbackup.utils.FtpManager;
 import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -26,6 +27,8 @@ public class BackupManager {
 		this.fullBackup = fullBackup;
 	}
 
+	FtpManager ftpm = new FtpManager(Bukkit.getConsoleSender());
+
 	public static List<String> tasks = new ArrayList<>();
 
 	public void createBackup() {
@@ -43,12 +46,18 @@ public class BackupManager {
 		File backupFolder = new File(ServerBackup.getInstance().backupDestination + "//backup-" + df.format(date) + "-"
 				+ filePath + "//" + filePath);
 
+		if(!ServerBackup.getInstance().getConfig().getBoolean("Ftp.CompressBeforeUpload")) {
+			ftpm.uploadFileToFtp(filePath, true);
+
+			return;
+		}
+
 		if (worldFolder.exists()) {
 			try {
 				if (!backupFolder.exists()) {
 					for (Player all : Bukkit.getOnlinePlayers()) {
 						if (all.hasPermission("backup.notification")) {
-							all.sendMessage("Backup [" + worldFolder + "] started.");
+							all.sendMessage(ServerBackup.getInstance().processMessage("Info.BackupStarted").replaceAll("%file%", worldFolder.getName()));
 						}
 					}
 
@@ -82,19 +91,19 @@ public class BackupManager {
 					try {
 						FileUtils.deleteDirectory(file);
 
-						sender.sendMessage("Backup [" + filePath + "] removed.");
+						sender.sendMessage(ServerBackup.getInstance().processMessage("Info.BackupRemoved").replaceAll("%file%", filePath));
 					} catch (IOException e) {
 						e.printStackTrace();
 
-						sender.sendMessage("Error while deleting '" + filePath + "'.");
+						sender.sendMessage(ServerBackup.getInstance().processMessage("Error.DeletionFailed").replaceAll("%file%", filePath));
 					}
 				} else {
 					file.delete();
 
-					sender.sendMessage("Backup [" + filePath + "] removed.");
+					sender.sendMessage(ServerBackup.getInstance().processMessage("Info.BackupRemoved").replaceAll("%file%", filePath));
 				}
 			} else {
-				sender.sendMessage("No Backup named '" + filePath + "' found.");
+				sender.sendMessage(ServerBackup.getInstance().processMessage("Error.NoBackupFound").replaceAll("%file%", filePath));
 			}
 		});
 	}
