@@ -1,6 +1,6 @@
 name: ServerBackup
 author: Seblii
-version: 2.9.4
+version: 2.9.6
 api-version: 1.18
 
 main: de.seblii.serverbackup.ServerBackup
