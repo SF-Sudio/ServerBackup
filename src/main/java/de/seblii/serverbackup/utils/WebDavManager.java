@@ -46,7 +46,7 @@ public class WebDavManager {
         Sardine sardine = SardineFactory.begin(USERNAME, PASSWORD);
         sardine.enablePreemptiveAuthentication(URL);
 
-        String des = Objects.requireNonNull(ServerBackup.getInstance().getConfig().getString("Cloud.WebDav.Destination")).replaceAll("/", "");
+        String des = Objects.requireNonNull(ServerBackup.getInstance().cloud.getString("Cloud.WebDav.Destination")).replaceAll("/", "");
 
         String folderWebDav = URL + (des.equals("") || des.equals("/") ? "" : des + "/");
 
