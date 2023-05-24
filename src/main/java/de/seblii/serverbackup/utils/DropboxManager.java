@@ -64,7 +64,7 @@ public class DropboxManager {
 
         sender.sendMessage("Dropbox: Uploading backup [" + file.getName() + "] ...");
 
-        String des = Objects.requireNonNull(ServerBackup.getInstance().getConfig().getString("CloudBackup.Options.Destination")).replaceAll("/", "");
+        String des = Objects.requireNonNull(ServerBackup.getInstance().cloud.getString("Cloud.Dropbox.Destination")).replaceAll("/", "");
 
         boolean success = false;
         try (InputStream in = Files.newInputStream(Paths.get(filePath))) {

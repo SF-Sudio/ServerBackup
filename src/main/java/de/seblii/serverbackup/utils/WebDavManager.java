@@ -46,17 +46,30 @@ public class WebDavManager {
         Sardine sardine = SardineFactory.begin(USERNAME, PASSWORD);
         sardine.enablePreemptiveAuthentication(URL);
 
-        String des = Objects.requireNonNull(ServerBackup.getInstance().getConfig().getString("Cloud.WebDav.Destination")).replaceAll("/", "");
+        String des = Objects.requireNonNull(ServerBackup.getInstance().cloud.getString("Cloud.WebDav.Destination")).replaceAll("/", "");
 
-        String folderWebDav = URL + (des.equals("") || des.equals("/") ? "" : des + "/");
+        String folderWebDav = URL + (des.equals("") || des.equals(".") ? "" : des + "/");
 
-        if (!des.equals("") && !des.equals("/") && !des.equals(".")) {
+        if (!des.equals("") && !des.equals(".")) {
 
             List<DavResource> resources = sardine.list(URL);
+
+            System.out.println(des);
+
+            for (DavResource res: resources
+                 ) {
+                System.out.println(res);
+            }
+
             boolean containsFolder = resources.stream()
-                    .anyMatch(resource -> resource.getName().equals(des));
+                    .anyMatch(resource -> {
+                        String[] parts = resource.getName().split("/");
+                        String lastPart = parts[parts.length - 1];
+                        return lastPart.equals(des);
+                    });
 
             if (!containsFolder) {
+                System.out.println("We in this");
                 sardine.createDirectory(folderWebDav);
             }
         }
