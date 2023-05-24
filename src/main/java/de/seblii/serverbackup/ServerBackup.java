@@ -259,7 +259,6 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		getConfig().addDefault("CloudBackup.Dropbox", false);
 		getConfig().addDefault("CloudBackup.WebDav", false);
 		//getConfig().addDefault("CloudBackup.GoogleDrive", true); //CHANGE
-		getConfig().addDefault("CloudBackup.Options.Destination", "/");
 		getConfig().addDefault("CloudBackup.Options.DeleteLocalBackup", false);
 
 		getConfig().addDefault("Ftp.UploadBackup", false);
@@ -307,6 +306,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		if(!cloud.contains("Cloud.Dropbox")) {
 			cloud.set("Cloud.Dropbox.AppKey", "appKey");
 			cloud.set("Cloud.Dropbox.AppSecret", "appSecret");
+			cloud.set("Cloud.Dropbox.Destination", "Backup/");
 		} else {
 			if(!Objects.equals(cloud.getString("Cloud.Dropbox.AppKey"), "appKey") && !cloud.contains("Cloud.Dropbox.ActivationLink")) {
 				cloud.set("Cloud.Dropbox.ActivationLink", "https://www.dropbox.com/oauth2/authorize?client_id=" + cloud.getString("Cloud.Dropbox.AppKey") + "&response_type=code&token_access_type=offline");
