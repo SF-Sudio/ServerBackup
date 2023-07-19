@@ -66,7 +66,33 @@ public class DropboxManager {
 
         String des = ServerBackup.getInstance().getConfig().getString("CloudBackup.Options.Destination").replaceAll("/", "");
         try (InputStream in = new FileInputStream(filePath)) {
-            FileMetadata metadata = client.files().uploadBuilder("/" + (des.equals("") ? "" : des + "/") + file.getName()).uploadAndFinish(in);
+            // Step 1: Upload session start
+            UploadSessionStartUploader uploadSessionStart = client.files().uploadSessionStart();
+            UploadSessionStartResult uploadSessionStartResult = uploadSessionStart.uploadAndFinish(in);
+            String sessionId = uploadSessionStartResult.getSessionId();
+            
+            // Step 2: Upload large file in chunks
+            long fileSize = file.length();
+            byte[] buffer = new byte[4 * 1000 * 1000]; // 4 MB chunk size
+            long uploaded = 0;
+            
+            int bytesRead;
+            while ((bytesRead = in.read(buffer)) != -1) {
+                ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(buffer, 0, bytesRead);
+                UploadSessionCursor cursor = new UploadSessionCursor(sessionId, uploaded);
+                
+                // Append data to the session
+                client.files().uploadSessionAppendV2(cursor).uploadAndFinish(byteArrayInputStream, bytesRead);
+                uploaded += bytesRead;
+            }
+            
+            // Step 3: Upload session finish
+            UploadSessionCursor cursor = new UploadSessionCursor(sessionId, fileSize);
+            CommitInfo commitInfo = CommitInfo.newBuilder("/" + (des.equals("") ? "" : des + "/") + file.getName())
+                    .withClientModified(new Date())
+                    .withMode(WriteMode.ADD)
+                    .build();
+            FileMetadata metadata = client.files().uploadSessionFinish(cursor, commitInfo).finish();
         } catch (UploadErrorException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
@@ -82,5 +108,4 @@ public class DropboxManager {
             }
         }
     }
-
 }
