@@ -1,6 +1,6 @@
 name: ServerBackup
 author: Seblii
-version: 2.9.6
+version: '${project.version}'
 api-version: 1.18
 
 main: de.seblii.serverbackup.ServerBackup
