@@ -77,7 +77,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 
 		getCommand("backup").setExecutor(new SBCommand());
 
-		Bukkit.getPluginManager().registerEvents(this, this); //CHANGE
+		Bukkit.getPluginManager().registerEvents(this, this);
 		Bukkit.getPluginManager().registerEvents(new DynamicBackup(), this);
 
 		startTimer();
@@ -85,10 +85,10 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		this.getLogger().log(Level.INFO, "ServerBackup: Plugin enabled.");
 
 		if (getConfig().getBoolean("UpdateAvailableMessage")) {
-			checkVersion(); //CHANGE
+			checkVersion();
 		}
 
-		int mpid = 14673; //17639 //CHANGE
+		int mpid = 14673;
 
 		Metrics metrics = new Metrics(this, mpid);
 
@@ -274,7 +274,6 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		getConfig().addDefault("BackupDestination", "Backups//");
 
 		getConfig().addDefault("CloudBackup.Dropbox", false);
-		//getConfig().addDefault("CloudBackup.GoogleDrive", true); //CHANGE
 		getConfig().addDefault("CloudBackup.Options.Destination", "/");
 		getConfig().addDefault("CloudBackup.Options.DeleteLocalBackup", false);
 
@@ -313,8 +312,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 			}
 		}
 
-		cloud.options().header("Dropbox - Watch this video for explanation: https://youtu.be/k-0aIohxRUA"
-				/*+"Google Drive - Watch this video for explanation: x"*/);
+		cloud.options().header("Dropbox - Watch this video for explanation: https://youtu.be/k-0aIohxRUA");
 
 		if(!cloud.contains("Cloud.Dropbox")) {
 			cloud.set("Cloud.Dropbox.AppKey", "appKey");
