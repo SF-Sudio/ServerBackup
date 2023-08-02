@@ -46,10 +46,12 @@ public class BackupManager {
 		File backupFolder = new File(ServerBackup.getInstance().backupDestination + "//backup-" + df.format(date) + "-"
 				+ filePath + "//" + filePath);
 
-		if(!ServerBackup.getInstance().getConfig().getBoolean("Ftp.CompressBeforeUpload")) {
-			ftpm.uploadFileToFtp(filePath, true);
+		if(ServerBackup.getInstance().getConfig().getBoolean("Ftp.UploadBackup")) {
+			if (!ServerBackup.getInstance().getConfig().getBoolean("Ftp.CompressBeforeUpload")) {
+				ftpm.uploadFileToFtp(filePath, true);
 
-			return;
+				return;
+			}
 		}
 
 		if (worldFolder.exists()) {

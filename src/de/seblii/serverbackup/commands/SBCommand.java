@@ -550,7 +550,7 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 							Bukkit.getScheduler().runTaskAsynchronously(ServerBackup.getInstance(), () -> {
 								FtpManager ftpm = new FtpManager(sender);
 
-								ftpm.uploadFileToFtp(args[2], false);
+								ftpm.uploadFileToFtp(args[2], !ServerBackup.getInstance().getConfig().getBoolean("Ftp.CompressBeforeUpload"));
 							});
 						}
 					} else if(args[0].equalsIgnoreCase("dropbox")) {
@@ -598,9 +598,9 @@ public class SBCommand implements CommandExecutor, TabCompleter {
 
 									Files.copy(file, des);
 
-									sender.sendMessage(backup.processMessage("Info.BackupFinished").replaceAll("%file%", file.getName()));
+									sender.sendMessage(backup.processMessage("Info.BackupFinished").replaceAll("%file%", args[1]));
 								} catch (IOException e) {
-									sender.sendMessage(backup.processMessage("Error.BackupFailed").replaceAll("%file%", file.getName()));
+									sender.sendMessage(backup.processMessage("Error.BackupFailed").replaceAll("%file%", args[1]));
 									e.printStackTrace();
 								}
 							}

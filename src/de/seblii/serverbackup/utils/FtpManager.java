@@ -1,5 +1,6 @@
 package de.seblii.serverbackup.utils;
 
+import de.seblii.serverbackup.BackupManager;
 import de.seblii.serverbackup.ServerBackup;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.net.ftp.FTP;
@@ -70,6 +71,7 @@ public class FtpManager {
 						ServerBackup.getInstance().getConfig().getString("Ftp.Server.BackupDirectory"));
 
 				sender.sendMessage(backup.processMessage("Info.FtpUpload").replaceAll("%file%", file.getName()));
+				BackupManager.tasks.add("FTP UPLOAD {" + filePath + "}");
 
 				ftpC.setControlKeepAliveTimeout(100);
 
@@ -103,6 +105,8 @@ public class FtpManager {
 				} else {
 					sender.sendMessage(backup.processMessage("Error.FtpUploadFailed"));
 				}
+
+				BackupManager.tasks.remove("FTP UPLOAD {" + filePath + "}");
 			} else {
 				try {
 					try {
@@ -159,6 +163,9 @@ public class FtpManager {
 					} else {
 						sender.sendMessage(backup.processMessage("Error.FtpUploadFailed"));
 					}
+
+					if(BackupManager.tasks.contains("FTP UPLOAD {" + filePath + "}"))
+						BackupManager.tasks.remove("FTP UPLOAD {" + filePath + "}");
 				} catch (Exception e) {
 					isSSL = false;
 					uploadFileToFtp(filePath, direct);
