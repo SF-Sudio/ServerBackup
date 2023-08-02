@@ -1,6 +1,6 @@
 # ServerBackup
 
-SourceCode of version 'v2.9.6'
+SourceCode of version 'v2.9.7'
 
 Website: https://server-backup.net/
 
