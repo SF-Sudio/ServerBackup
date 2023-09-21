@@ -342,7 +342,7 @@ public class ServerBackup extends JavaPlugin implements Listener {
 			try {
 				boolean fileLoaded = backupInfo.createNewFile();
 				if (fileLoaded) {
-					getLogger().info("backupInfo.yml loaded successfully.");
+					getLogger().info("New backupInfo.yml file created.");
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
