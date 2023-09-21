@@ -55,9 +55,10 @@
     </dependencies>
 
     <build>
+        <sourceDirectory>src</sourceDirectory>
         <resources>
             <resource>
-                <directory>src/main/resources</directory>
+                <directory>src</directory>
                 <filtering>true</filtering>
             </resource>
         </resources>
