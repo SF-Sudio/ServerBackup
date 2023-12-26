@@ -2,7 +2,6 @@ package de.seblii.serverbackup;
 
 import de.seblii.serverbackup.commands.SBCommand;
 import org.apache.commons.io.FileUtils;
-import org.bstats.MetricsBase;
 import org.bstats.bukkit.Metrics;
 import org.bstats.charts.SimplePie;
 import org.bstats.charts.SingleLineChart;
@@ -33,6 +32,7 @@ import java.util.logging.Level;
 public class ServerBackup extends JavaPlugin implements Listener {
 
 	private static ServerBackup sb;
+	private boolean isSaving;
 
 	public static ServerBackup getInstance() {
 		return sb;
@@ -340,13 +340,16 @@ public class ServerBackup extends JavaPlugin implements Listener {
 	public void loadBpInf() {
 		if (!backupInfo.exists()) {
 			try {
-				backupInfo.createNewFile();
+				boolean fileLoaded = backupInfo.createNewFile();
+				if (fileLoaded) {
+					getLogger().info("New backupInfo.yml file created.");
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
 
-		saveBpInf();
+		saveBackupInfoChanges();
 	}
 
 	public void saveBpInf() {
@@ -530,4 +533,18 @@ public class ServerBackup extends JavaPlugin implements Listener {
 		}
 	}
 
+	public void saveBackupInfoChanges() {
+		if (!isSaving) {
+			isSaving = true;
+
+			Bukkit.getScheduler().runTaskLaterAsynchronously(ServerBackup.getInstance(), () -> {
+				ServerBackup.getInstance().saveBpInf();
+				if (ServerBackup.getInstance().getConfig().getBoolean("SendLogMessages")) {
+					Bukkit.getLogger().log(Level.INFO, "DynamicBP: file saved.");
+				}
+
+				isSaving = false;
+			}, 100);
+		}
+	}
 }

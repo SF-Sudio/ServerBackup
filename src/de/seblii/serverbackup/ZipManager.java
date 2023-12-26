@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.Level;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -59,78 +60,89 @@ public class ZipManager {
 
 			try (ZipOutputStream zs = new ZipOutputStream(Files.newOutputStream(p))) {
 				Path pp = Paths.get(sourceFilePath);
-				Files.walk(pp).filter(path -> !Files.isDirectory(path)).forEach(path -> {
-					if (!path.toString().contains(ServerBackup.getInstance().getConfig().getString("BackupDestination")
-							.replaceAll("/", ""))) {
-						ZipEntry zipEntry = new ZipEntry(pp.relativize(path).toString());
+				try (Stream<Path> walk = Files.walk(pp)) {
+					walk.filter(path -> !Files.isDirectory(path)).forEach(path -> {
+						if (!path.toString().contains(ServerBackup.getInstance().getConfig().getString("BackupDestination")
+								.replaceAll("/", ""))) {
+							ZipEntry zipEntry = new ZipEntry(pp.relativize(path).toString());
 
-						for (String blacklist : ServerBackup.getInstance().getConfig().getStringList("Blacklist")) {
-							File bl = new File(blacklist);
+							for (String blacklist : ServerBackup.getInstance().getConfig().getStringList("Blacklist")) {
+								File bl = new File(blacklist);
 
-							if (bl.isDirectory()) {
-								if (path.toFile().getParent().toString().startsWith(bl.toString())
-										|| path.toFile().getParent().toString().startsWith(".\\" + bl.toString())) {
-									return;
-								}
-							} else {
-								if (path.equals(new File(blacklist).toPath())
-										|| path.equals(new File(".\\" + blacklist).toPath())) {
-									sender.sendMessage("Found '" + path.toString() + "' in blacklist. Skipping file.");
-									return;
-								}
-							}
-						}
-
-						if (!fullBackup) {
-							if (ServerBackup.getInstance().getConfig().getBoolean("DynamicBackup")) {
-								if (path.getParent().toString().endsWith("region")
-										|| path.getParent().toString().endsWith("entities")
-										|| path.getParent().toString().endsWith("poi")) {
-									boolean found = false;
-									if (ServerBackup.getInstance().bpInf
-											.contains("Data." + path.getParent().getParent().toString() + ".Chunk."
-													+ path.getFileName().toString())) {
-										found = true;
-									}
-
-									if (!found)
+								if (bl.isDirectory()) {
+									if (path.toFile().getParent().toString().startsWith(bl.toString())
+											|| path.toFile().getParent().toString().startsWith(".\\" + bl.toString())) {
 										return;
-								}
-							}
-						}
-
-						try {
-							if (sendDebugMsg) {
-								if (ServerBackup.getInstance().getConfig().getBoolean("SendLogMessages")) {
-									ServerBackup.getInstance().getLogger().log(Level.INFO,
-											"Zipping '" + path.toString() + "'");
-
-									if (Bukkit.getConsoleSender() != sender) {
-										sender.sendMessage("Zipping '" + path.toString());
+									}
+								} else {
+									if (path.equals(new File(blacklist).toPath())
+											|| path.equals(new File(".\\" + blacklist).toPath())) {
+										sender.sendMessage("Found '" + path.toString() + "' in blacklist. Skipping file.");
+										return;
 									}
 								}
 							}
 
-							zs.putNextEntry(zipEntry);
+							if (!fullBackup) {
+								if (ServerBackup.getInstance().getConfig().getBoolean("DynamicBackup")) {
+									if (path.getParent().toString().endsWith("region")
+											|| path.getParent().toString().endsWith("entities")
+											|| path.getParent().toString().endsWith("poi")) {
+										boolean found = false;
+										String worldName;
 
-							if (System.getProperty("os.name").startsWith("Windows")
-									&& path.toString().contains("session.lock")) {
-							} else {
-								try {
-									Files.copy(path, zs);
-								} catch (IOException e) {
-									e.printStackTrace();
+										// Nether/The End regions were not backed up due to extra nested DIM folder, solves that case.
+										if (path.toString().contains("DIM1") || path.toString().contains("DIM-1")) {
+											worldName = path.getParent().getParent().getParent().toString();
+										} else {
+											worldName = path.getParent().getParent().toString();
+										}
+
+										if (ServerBackup.getInstance().bpInf
+												.contains("Data." + worldName + ".Chunk."
+														+ path.getFileName().toString())) {
+											found = true;
+										}
+
+										if (!found)
+											return;
+									}
 								}
 							}
 
-							zs.closeEntry();
-						} catch (IOException e) {
-							e.printStackTrace();
-							ServerBackup.getInstance().getLogger().log(Level.WARNING, "Error while zipping files.");
-							return;
+							try {
+								if (sendDebugMsg) {
+									if (ServerBackup.getInstance().getConfig().getBoolean("SendLogMessages")) {
+										ServerBackup.getInstance().getLogger().log(Level.INFO,
+												"Zipping '" + path.toString() + "'");
+
+										if (Bukkit.getConsoleSender() != sender) {
+											sender.sendMessage("Zipping '" + path.toString());
+										}
+									}
+								}
+
+								zs.putNextEntry(zipEntry);
+
+								if (System.getProperty("os.name").startsWith("Windows")
+										&& path.toString().contains("session.lock")) {
+								} else {
+									try {
+										Files.copy(path, zs);
+									} catch (IOException e) {
+										e.printStackTrace();
+									}
+								}
+
+								zs.closeEntry();
+							} catch (IOException e) {
+								e.printStackTrace();
+								ServerBackup.getInstance().getLogger().log(Level.WARNING, "Error while zipping files.");
+								return;
+							}
 						}
-					}
-				});
+						});
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 				ServerBackup.getInstance().getLogger().log(Level.WARNING, "Error while zipping files.");
@@ -167,7 +179,7 @@ public class ZipManager {
 						targetFilePath = targetFilePath.split("backup")[0] + "dynamic-backup"
 								+ targetFilePath.split("backup")[1];
 
-						ServerBackup.getInstance().saveBpInf();
+						ServerBackup.getInstance().saveBackupInfoChanges();
 					}
 				}
 			}
